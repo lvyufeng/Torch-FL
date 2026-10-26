@@ -848,6 +848,39 @@ TORCH_LIBRARY_IMPL(aten, PrivateUse1, m) {
   #elif defined(FLAGOS_ACCEL_TSINGMICRO)
   #include "generated/register_flaggems_tsingmicro.inc"
   #endif
+  // The low-precision matrix ops: mm, bmm and their overloads on a build that
+  // compiled the software path but whose conf routes them `none`.
+  //
+  // The generated wrapper is the only route to the software path -- its
+  // prelude decodes an FP8/FP4 pair and calls soft_lowp before any dispatcher
+  // lookup -- and on such a build nothing reaches it: `backends_hygon.conf`
+  // spell mm, bmm and mm.out `none`, so an op that is registered raises "routed
+  // to 'none' ... but the op is registered" on every dtype, and one that is not
+  // registered (mm/bmm on DCU; everything but addmm on MetaX) sends every dtype
+  // to cpu_fallback. Measured as test_soft_lowp_gate_dispatch.py on both lanes
+  // (CI run 40329997842): mm answered in float8 from the CPU, bmm had no CPU
+  // kernel, and every MetaX case but addmm left the device.
+  //
+  // Both wheels compile no register list for these ops, so PrivateUse1 answers
+  // through the key-wide cpu_fallback registered at the bottom of this file.
+  // An ATen kernel below PrivateUse1 runs before that fallback, so taking these
+  // ops replaces it with the wrapper the generated list would have used: the
+  // prelude reaches the software path on an FP8/FP4 pair, and an ordinary pair
+  // continues through the wrapper to the dispatcher, whose `none` route is the
+  // same cpu_fallback as before. Not the claim f78ce13 made and #655 reverted:
+  // that one registered the op and left the dispatcher its `none` route, which
+  // raises for every dtype.
+  //
+  // Only the platforms whose conf routes these `none` and whose wheel registers
+  // no list for them take it; CUDA's variant routes them `flagGems`, so its
+  // generated list owns them already.
+  #if defined(FLAGOS_SOFT_LOWP) && \
+      (defined(FLAGOS_ACCEL_DCU) || defined(FLAGOS_ACCEL_METAX))
+  m.impl("mm", WrapperMm);
+  m.impl("mm.out", WrapperMmOut);
+  m.impl("bmm", WrapperBmm);
+  m.impl("bmm.out", WrapperBmmOut);
+  #endif
   // The *_overrideable conv ops are the exception the generic cpu_fallback
   // cannot serve (see the wrapper comment above): ATen's only other kernel for
   // them raises, and a fallback re-dispatches the *same* op, so it lands back on
