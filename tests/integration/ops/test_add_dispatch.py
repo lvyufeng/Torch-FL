@@ -33,7 +33,7 @@ import pytest
 import torch
 import torch_fl  # noqa: F401
 
-from backend_conf import routed_backend, routed_backend_or_none
+from backend_conf import routed_backend, routed_backend_or_none, route_is_served
 
 
 DEVICE = "flagos:0"
@@ -139,8 +139,14 @@ class TestAddTensorDispatch:
         conf deliberately leaves the op unaccelerated the case skips, the same
         containment ``test_bmm_dispatch.py`` uses.
         """
-        if routed_backend_or_none("add.Tensor") is None:
+        expected = routed_backend_or_none("add.Tensor")
+        if expected is None:
             pytest.skip("add.Tensor does not take an accelerated route here")
+        if not route_is_served("add.Tensor"):
+            pytest.skip(
+                f"this wheel did not compile the `{expected}` route the conf "
+                "names, so the op is unregistered and logs no dispatch"
+            )
         result = _run_add_subprocess({"FLAGOS_LOG": "dispatch"})
         assert result.returncode == 0, f"Failed:\n{result.stderr}"
         expected = routed_backend("add.Tensor")
@@ -153,7 +159,7 @@ class TestAddTensorDispatch:
             {"FLAGOS_LOG": "dispatch", "FLAGOS_OP_add__Tensor": "cuda"}
         )
         assert result.returncode == 0
-        assert "[flagos dispatch] add.Tensor -> cuda" in result.stderr
+        assert "[flagos dispatch] add.Tensor -> boxing" in result.stderr
 
     @pytest.mark.ascend
     def test_dispatch_log_ascend(self):

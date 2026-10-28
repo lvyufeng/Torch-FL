@@ -208,7 +208,7 @@ it.
 **The angle path ships as the default on the flagos device, on both vendors that
 install it.** `torch_fl` calls `patch_diffusers_qwenimage_rope` at import — from
 `torch_fl/accelerator/ascend/_ascend_compat.py` on Ascend, from
-`torch_fl/accelerator/gcu/_gcu_compat.py` on GCU, two copies of the same
+`torch_fl/accelerator/enflame/_gcu_compat.py` on GCU, two copies of the same
 registration because this change deliberately touches no GCU file — which
 registers the `flagos` device in both halves of the extension point upstream
 provides for exactly this case:
@@ -726,7 +726,7 @@ The 24 on the boxing path: `_upsample_nearest_exact2d`, `addmm`, `alias`, `cat`,
 
 Two of those are worth calling out for a chip that has to reproduce them.
 `view_as_complex` and `view_as_real` are the complex-dtype rotary embeddings of
-§3; they are on the boxing path because `torch_fl/configs/backends_cuda.conf`
+§3; they are on the boxing path because `torch_fl/configs/backends_nvidia.conf`
 routes them there (`view_as_complex = cuda`, `view_as_real = cuda`), and they are
 called 24,000 and 120,000 times per image respectively. `convolution` is the
 VAE's causal `Conv3d`, 37 calls per image.

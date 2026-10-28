@@ -28,7 +28,7 @@ namespace at::native::flagos {
 //   // cpp:
 //   ADD_IMPL_TO_DISPATCHER(MmFn, mm_dispatcher, "mm")
 //   REGISTER_IMPL_TO_DISPATCHER(MmFn, mm_dispatcher, Backend::kFlagGemsCpp, my_flaggems_cpp_mm)
-//   REGISTER_IMPL_TO_DISPATCHER(MmFn, mm_dispatcher, Backend::kCuda,   my_cuda_mm)
+//   REGISTER_IMPL_TO_DISPATCHER(MmFn, mm_dispatcher, Backend::kBoxing,   my_cuda_mm)
 //
 //   // call (uses op_name "mm" for config lookup):
 //   mm_dispatcher(self, mat2, out);
@@ -122,18 +122,18 @@ class Dispatcher {
 
   void RegisterKernel(Backend device, FnPtr fn) {
     switch (device) {
-      case Backend::kCuda:          cuda_fn_ = fn;              break;
+      case Backend::kBoxing:          cuda_fn_ = fn;              break;
       case Backend::kFlagGemsCpp:   flaggems_cpp_fn_ = fn;     break;
       case Backend::kFlagGems:      flaggems_fn_ = fn;         break;
       case Backend::kAscend:        ascend_fn_ = fn;           break;
-      case Backend::kMusa:          musa_fn_ = fn;             break;
+      case Backend::kMthreads:      mthreads_fn_ = fn;        break;
       case Backend::kMetax:         metax_fn_ = fn;            break;
       case Backend::kTsingMicro:    tsingmicro_fn_ = fn;       break;
-      case Backend::kGcu:           gcu_fn_ = fn;              break;
+      case Backend::kEnflame:       enflame_fn_ = fn;         break;
       case Backend::kKunlunxin:     kunlunxin_fn_ = fn;        break;
       case Backend::kIluvatar:      iluvatar_fn_ = fn;         break;
       case Backend::kTileOps:       tileops_fn_ = fn;          break;
-      case Backend::kMps:           mps_fn_ = fn;              break;
+      case Backend::kApple:         apple_fn_ = fn;           break;
       // Neither names a kernel set, so there is no slot to fill. kNone is the
       // conf's "no accelerated impl here" verdict; kUncached is the sentinel
       // operator() uses before it has resolved the op. Listed explicitly rather
@@ -142,6 +142,17 @@ class Dispatcher {
       case Backend::kUncached:
         break;
     }
+  }
+
+  // The kernel `device` resolves to, including GetFn's own degradation, or
+  // nullptr. Lets a kernel set claim an empty slot without displacing the set
+  // the conf's key actually names (soft_lowp/dispatch.cc).
+  FnPtr KernelFor(Backend device) const {
+    return GetFn(device);
+  }
+
+  bool HasKernel(Backend device) const {
+    return KernelFor(device) != nullptr;
   }
 
   template <typename... Args>
@@ -170,6 +181,18 @@ class Dispatcher {
     auto fn = GetFn(backend);
     TORCH_CHECK(fn, op_name_, DispatchFailureMessage(backend));
     return fn(std::forward<Args>(args)...);
+  }
+
+  // Route exactly the way operator() would, without the generated wrapper's
+  // dtype prelude in front of it. The software low-precision matrix path needs
+  // this: its wrapper takes every FLAGOS_SOFT_LOWP build's floating-point GEMMs
+  // as well as the FP8/FP4 ones (the generated .inc cannot tell whether this
+  // build compiles the software path), and the software path has to hand the
+  // ordinary ones back to whatever the conf names -- FlagGems on MetaX, boxing
+  // elsewhere -- rather than to one hard-coded slot.
+  template <typename... Args>
+  decltype(auto) DispatchConfigured(Args&&... args) const {
+    return operator()(std::forward<Args>(args)...);
   }
 
   template <typename... Args>
@@ -215,20 +238,26 @@ class Dispatcher {
 
   // The build's own native kernel slot, with the backend name that selects it.
   // Exactly one is ever populated: a build registers its native kernels into
-  // its own slot (kAscend on Ascend, kMusa on MUSA, ...) and, on the
-  // CUDA-compatible platforms, boxing kernels into kCuda. Ordered
+  // its own slot (kAscend on Ascend, kMthreads on MUSA, ...) and, on the
+  // CUDA-compatible platforms, boxing kernels into kBoxing -- which this does
+  // not offer. The boxing kernels are not this build's own (a CPU-torch shim or
+  // another vendor's runtime can host them), and the conf's own degradation
+  // path already reads a FlagGems route with no FlagGems kernel as
+  // `cuda_fn_ ? cuda_fn_ : flaggems_fn_`. Offering the slot when both exist
+  // made FlagGems a second runtime route: NVIDIA's conf leaves index_select off
+  // FlagGems for a broken kernel, and a FlagGems route could still land on the
+  // boxing kernel. Ordered
   // most-specific-first so a build that somehow populated two still prefers
   // the vendor's own kernels.
   std::pair<FnPtr, Backend> VendorSlot() const {
     if (ascend_fn_)      return {ascend_fn_,      Backend::kAscend};
-    if (musa_fn_)        return {musa_fn_,        Backend::kMusa};
+    if (mthreads_fn_)    return {mthreads_fn_,    Backend::kMthreads};
     if (metax_fn_)       return {metax_fn_,       Backend::kMetax};
-    if (gcu_fn_)         return {gcu_fn_,         Backend::kGcu};
+    if (enflame_fn_)     return {enflame_fn_,     Backend::kEnflame};
     if (kunlunxin_fn_)   return {kunlunxin_fn_,   Backend::kKunlunxin};
     if (iluvatar_fn_)    return {iluvatar_fn_,    Backend::kIluvatar};
     if (tsingmicro_fn_)  return {tsingmicro_fn_,  Backend::kTsingMicro};
-    if (mps_fn_)         return {mps_fn_,         Backend::kMps};
-    if (cuda_fn_)        return {cuda_fn_,        Backend::kCuda};
+    if (apple_fn_)       return {apple_fn_,       Backend::kApple};
     return {nullptr, Backend::kNone};
   }
 
@@ -277,7 +306,7 @@ class Dispatcher {
       // registration FlagGems installs itself, and returning nullptr there
       // turns "this build does not box" into a dispatch error for ops that ran
       // before the route moved. Same shape as the kFlagGems arm below.
-      case Backend::kCuda:
+      case Backend::kBoxing:
         return cuda_fn_ ? cuda_fn_ : flaggems_fn_;
       // FlagGems C++ runtime is only compiled in for a FLAGOS_BUILD_FLAGGEMS_CPP=ON
       // build (flaggems_cpp_kernels.cc, behind FLAGOS_FLAGGEMS_CPP), which needs
@@ -301,13 +330,13 @@ class Dispatcher {
         if (flaggems_fn_) return flaggems_fn_;
         return cuda_fn_ ? cuda_fn_ : flaggems_cpp_fn_;
       case Backend::kAscend:        return ascend_fn_;
-      case Backend::kMusa:          return musa_fn_;
+      case Backend::kMthreads:      return mthreads_fn_;
       case Backend::kMetax:         return metax_fn_;
       case Backend::kTsingMicro:    return tsingmicro_fn_;
-      case Backend::kGcu:           return gcu_fn_;
+      case Backend::kEnflame:       return enflame_fn_;
       case Backend::kKunlunxin:     return kunlunxin_fn_;
       case Backend::kIluvatar:      return iluvatar_fn_;
-      case Backend::kMps:           return mps_fn_;
+      case Backend::kApple:         return apple_fn_;
       // TileOPs kernels live in Python and are bound via torch.library on
       // PrivateUse1, which intercepts before this dispatcher is reached. A conf
       // entry of "tileops" therefore only lands here when that registration did
@@ -363,7 +392,7 @@ class Dispatcher {
   // backend that no kernel set owns.
   static const char* KernelSetOf(Backend backend) {
     switch (backend) {
-      case Backend::kCuda:        return "boxing";
+      case Backend::kBoxing:        return "boxing";
       case Backend::kFlagGemsCpp: return "flaggems_cpp";
       case Backend::kFlagGems:    return "flaggems";
       case Backend::kTileOps:     return "tileops";
@@ -371,36 +400,41 @@ class Dispatcher {
       // (ACLNN, mudnn, topsaten, ...), which the single FLAGOS_BUILD_VENDOR switch
       // compiles. There is one such library per build, never two.
       case Backend::kAscend:
-      case Backend::kMusa:
+      case Backend::kMthreads:
       case Backend::kMetax:
       case Backend::kTsingMicro:
-      case Backend::kGcu:         return "vendor";
+      case Backend::kEnflame:     return "vendor";
       case Backend::kKunlunxin:   return "vendor";
       case Backend::kIluvatar:    return "vendor";
-      case Backend::kMps:         return "vendor";
+      case Backend::kApple:       return "vendor";
       case Backend::kNone:
       case Backend::kUncached:    return nullptr;
     }
     return nullptr;
   }
 
+  // The names the dispatch log prints. Several are what the SDK-era conf spelled
+  // the same kernel (`musa`, `gcu`, `mps`, `flagos`, `flagos_python`) and are kept
+  // for the tests and logs that read them. tests/unit/test_ops_conf_log_names.py
+  // holds this list against the shipped confs: a conf key the log cannot print
+  // has no dispatch line to assert against.
   static void LogDispatch(const std::string& op_name, Backend backend) {
     static const bool enabled = LogEnabled("dispatch");
     if (!enabled) return;
     const char* name;
     switch (backend) {
-      case Backend::kCuda:          name = "cuda"; break;
+      case Backend::kBoxing:        name = "boxing"; break;
       case Backend::kFlagGemsCpp:   name = "flagos"; break;  // keep old name for test compat
       case Backend::kFlagGems:      name = "flagos_python"; break;  // keep old name for test compat
       case Backend::kAscend:        name = "ascend"; break;
-      case Backend::kMusa:          name = "musa"; break;
+      case Backend::kMthreads:      name = "musa"; break;
       case Backend::kMetax:         name = "metax"; break;
       case Backend::kTsingMicro:    name = "tsingmicro"; break;
-      case Backend::kGcu:           name = "gcu"; break;
+      case Backend::kEnflame:       name = "gcu"; break;
       case Backend::kKunlunxin:     name = "kunlunxin"; break;
       case Backend::kIluvatar:      name = "iluvatar"; break;
       case Backend::kTileOps:       name = "tileops"; break;
-      case Backend::kMps:           name = "mps"; break;
+      case Backend::kApple:         name = "mps"; break;
       case Backend::kNone:          name = "none"; break;
       default:                      name = "unknown"; break;
     }
@@ -416,14 +450,14 @@ class Dispatcher {
   FnPtr flaggems_cpp_fn_   = nullptr;
   FnPtr flaggems_fn_       = nullptr;
   FnPtr ascend_fn_         = nullptr;
-  FnPtr musa_fn_           = nullptr;
+  FnPtr mthreads_fn_       = nullptr;
   FnPtr metax_fn_          = nullptr;
   FnPtr tsingmicro_fn_     = nullptr;
-  FnPtr gcu_fn_            = nullptr;
+  FnPtr enflame_fn_        = nullptr;
   FnPtr kunlunxin_fn_      = nullptr;
   FnPtr iluvatar_fn_       = nullptr;
   FnPtr tileops_fn_        = nullptr;
-  FnPtr mps_fn_            = nullptr;
+  FnPtr apple_fn_          = nullptr;
 };
 
 namespace detail {

@@ -26,20 +26,20 @@
 // pulled in only for the platform that defines USE_KUNLUNXIN, matching how
 // contiguous_ops.cc includes it.
 #include "backends/ascend/ascend_copy.h"
-#include "backends/gcu/gcu_copy.h"
+#include "backends/enflame/gcu_copy.h"
 #if defined(USE_KUNLUNXIN)
 #include "backends/kunlunxin/kunlunxin_copy.h"
 #endif
 #if defined(USE_MPS)
-#include "backends/mps/mps_copy.h"
+#include "backends/apple/mps_copy.h"
 #endif
 
 #if defined(FLAGOS_MUSA_KERNEL)
-#include "backends/musa/mudnn_common.h"
+#include "backends/mthreads/mudnn_common.h"
 #elif defined(USE_MUSA)
-#include "runtime/accelerator/musa/musa_stream.h"
+#include "runtime/accelerator/mthreads/musa_stream.h"
 #elif defined(USE_GCU)
-#include "runtime/accelerator/gcu/tops_stream.h"
+#include "runtime/accelerator/enflame/tops_stream.h"
 #endif
 
 // On the CUDA-family backends (including MetaX boxing) the flagos device shares
@@ -289,6 +289,40 @@ void CrossDeviceMemcpy(
     size_t nbytes,
     const at::Tensor& src,
     const at::Tensor& dst) {
+#if defined(USE_KUNLUNXIN)
+  // Kunlunxin's `Memcpy` is `xpu_memcpy`, and its DEVICE_TO_DEVICE kind is a
+  // same-card copy: handed two pointers that live on different XPUs it returns
+  // -801 and writes nothing. Measured on a P800 (torch 2.10.0+cpu) with one
+  // float tensor of 2.0:
+  //
+  //     cpu     -> flagos:1   2.0   correct (host round trip)
+  //     flagos:1 -> flagos:0  2.0   correct
+  //     flagos:0 -> flagos:1  0.0   -- xpu_memcpy returned -801
+  //
+  // The direction is not what matters -- binding either device first gave the
+  // same -801 -- and `copy_` across that pair left the destination untouched.
+  // The SDK has a dedicated primitive, `xpu_memcpy_peer(dst_device, dst,
+  // src_device, src, sz)`, which returns 0 and delivers the data.
+  //
+  // Without this, BertModelTest::test_model_parallelism -- which splits a model
+  // across flagos:0 and flagos:1 through device_map="auto" -- fails with every
+  // one of its 2912 elements wrong.
+  if (src.device() != dst.device()) {
+    TORCH_CHECK(
+        MemcpyPeer(
+            static_cast<int>(dst.device().index()),
+            dst_ptr,
+            src.device().index(),
+            src_ptr,
+            nbytes) == Success,
+        "kunlunxin: cross-device copy from ",
+        src.device(),
+        " to ",
+        dst.device(),
+        " failed");
+    return;
+  }
+#endif
 #ifdef FLAGOS_DCU_VENDOR_STREAMS
   c10::flagos::dcu::CopyDeviceBytes(
       dst_ptr, dst.device().index(), src_ptr, src.device().index(), nbytes);
@@ -300,17 +334,17 @@ void CrossDeviceMemcpy(
   SyncPeerCopyVisibility(src, dst);
 }
 
-#if defined(FLAGOS_BOXING_BUILD)
-// The maca CUDA copy kernel (reached via DeviceBoxingGuard + at::native::copy_)
+// The native CUDA copy kernel (reached via DeviceBoxingGuard + at::native::copy_)
 // has no UInt16/UInt32/UInt64 case in its dtype dispatch, so any dtype *cast*
 // to or from those types raises `"copy_" not implemented for 'UInt32'`. The
 // host copy kernel supports the full set, so route those casts through a CPU
 // round-trip instead. Same-dtype copies are unaffected: they take the direct
 // memcpy path and never reach a dtype dispatch.
 //
-// Only the boxing arms ask this question: without the boxing kernels every copy
-// goes through strided_copy_cast_via_cpu below, which is a host round-trip
-// already.
+// Both CUDA arms ask this question: the boxing arm and the FlagGems-primary arm
+// differ in whether the boxed kernels were compiled, not in which casts the
+// native copy kernel can do, and both reach the same kernel through
+// DeviceBoxingGuard.
 bool cast_needs_cpu_roundtrip(c10::ScalarType src, c10::ScalarType dst) {
   if (src == dst) {
     return false;
@@ -320,7 +354,6 @@ bool cast_needs_cpu_roundtrip(c10::ScalarType src, c10::ScalarType dst) {
   };
   return is_unsigned(src) || is_unsigned(dst);
 }
-#endif
 
 // Copy `src` (a flagos device tensor) into `dst` (a flagos device tensor),
 // casting dtype and honoring both tensors' strides, via a host round-trip.
@@ -915,9 +948,20 @@ at::Tensor _to_copy(
         at::native::copy_(result, self_contig, false);
       }
 #else
-      // CUDA platform without the boxing kernels: there is no native CUDA
-      // TensorIterator cast to dispatch to, so cast through host memory.
-      strided_copy_cast_via_cpu(self_contig, result);
+      // CUDA platform without the boxing kernels. `DeviceBoxingGuard` does not
+      // need them: it only rewrites a tensor's device metadata to CUDA, and a
+      // build that gets here links a real libtorch_cuda, so the native
+      // TensorIterator copy kernel is available to dispatch to. Without this
+      // arm every dtype cast was a D2H -> host cast -> H2D round trip. Measured
+      // on the OCR-RM Qwen3.5-VL 2B value head (8x H100): 4333 `_to_copy` calls
+      // and 8826 blocking cudaMemcpy per forward against 574 async ones on
+      // stock CUDA, 2.0 s of the 4.2 s forward spent blocked in cudaMemcpy.
+      if (cast_needs_cpu_roundtrip(self_contig.scalar_type(), dtype)) {
+        strided_copy_cast_via_cpu(self_contig, result);
+      } else {
+        DeviceBoxingGuard guard(self_contig, result);
+        at::native::copy_(result, self_contig, false);
+      }
 #endif
 #endif
     } else {

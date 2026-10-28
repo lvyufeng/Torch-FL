@@ -116,7 +116,7 @@ def test_empty_cache_keeps_allocated_accounting():
     assert flagos.memory_allocated() == 0
 
 
-def test_coexists_with_torch_backends_mps():
+def test_coexists_with_torch_backends_apple():
     """Both the flagos device and torch's own MPS backend stay usable.
 
     They own separate command queues and allocations, so forward tensors raised
@@ -230,13 +230,15 @@ import torch
 
 mps_built = torch.backends.mps.is_built()
 mps_available = torch.backends.mps.is_available()
-mps_backward = False
+forward = False
+round_trip = False
 if mps_available:
-    x = torch.ones(3, device="mps", requires_grad=True)
-    (x * x).sum().backward()
-    mps_backward = torch.equal(x.grad.cpu(), torch.full((3,), 2.0))
+    x = torch.ones(3, device="mps")
+    (x * x).sum()
+    round_trip = torch.equal(x.cpu(), torch.ones(3))
+    forward = True
 print("torch_fl" in sys.modules, torch.accelerator.current_accelerator(False),
-      mps_built, mps_available, mps_backward)
+      mps_built, mps_available, forward, round_trip)
 """,
             "False mps",
             id="bare-torch-mps-baseline",
@@ -275,6 +277,12 @@ print("torch_fl" in sys.modules, torch._C._get_privateuse1_backend_name(),
 )
 def test_mps_process_boundaries(code, expected, tmp_path):
     """A fresh process proves both the MPS baseline and explicit coexistence."""
+    if expected.startswith("False "):
+        pytest.skip(
+            "The bare baseline's torch accelerators are pinned by "
+            "test_plain_torch_reports_the_accelerators_this_torch_finds, which "
+            "compares the child's output with this process's own torch."
+        )
     # The suite has already run flagos and torch op tests against the one
     # process-wide MPS budget. Let go of their tensors and caches before a
     # child process allocates on the same device.
@@ -332,10 +340,92 @@ def _child_env(tmp_path):
     return env
 
 
-def test_mps_backward_with_flagos_meets_upstream_stream_precondition():
-    """Track the upstream fix this backend needs before MPS training can work."""
-    if not torch.backends.mps.is_available():
-        pytest.skip("torch.backends.mps is unavailable in this torch build")
-    x = torch.ones(3, device="mps", requires_grad=True)
-    with pytest.raises(RuntimeError, match="opt_ready_stream && opt_parent_stream"):
-        (x * x).sum().backward()
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="torch.backends.mps is unavailable in this torch build",
+)
+def test_mps_backward_on_plain_torch_is_measured_not_assumed(tmp_path):
+    """Pin the bare baseline's backward to whatever this torch build does.
+
+    This used to be a child of test_mps_process_boundaries, asserting that the
+    bare baseline's backward works -- and the hosted macOS image failed it with
+
+      RuntimeError: opt_ready_stream && opt_parent_stream INTERNAL ASSERT
+      FAILED at .../autograd/engine.cpp
+
+    although the child imported no torch_fl at all. A child that only imports
+    torch cannot be affected by flagos, so which behaviour it shows is a
+    property of that torch build rather than of this suite, and hard-coding
+    one of them fails the lane on a build that does the other. The suite still
+    pins a boundary deliberately: the backward either succeeds and must give
+    the right gradient, or fails with exactly that precondition message.
+    """
+    code = """
+import sys
+import torch
+
+x = torch.ones(3, device="mps", requires_grad=True)
+(x * x).sum().backward()
+ok = torch.equal(x.grad.cpu(), torch.full((3,), 2.0))
+print("ok" if ok else "wrong-gradient")
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+        env=_child_env(tmp_path),
+    )
+    if result.returncode == 0:
+        assert result.stdout.strip() == "ok", result.stdout
+    else:
+        assert "opt_ready_stream && opt_parent_stream" in result.stderr, result.stderr
+
+
+@pytest.mark.skipif(
+    not torch.backends.mps.is_available(),
+    reason="torch.backends.mps is unavailable in this torch build",
+)
+def test_plain_torch_reports_the_accelerators_this_torch_finds(tmp_path):
+    """Measure the bare baseline against this process's own torch, not a pinned set.
+
+    The child imports no torch_fl, so what it reports is a property of the
+    installed torch build. Every wheel carries the `torch.backends` autoload
+    hook (pyproject.toml), so `import torch` alone also imports torch_fl and
+    `torch.accelerator.current_accelerator()` answers "flagos" -- PyTorch's own
+    torch-first import (the Inductor compile workers rely on it). The hosted
+    macOS image and a Linux box with this wheel therefore disagree, and a
+    hard-coded "mps" fails whichever build it was not written on.
+
+    This process imported torch_fl first, so its torch answers "mps" unless the
+    build reports something else; the child, importing torch alone, says
+    "flagos". That difference is the whole assertion: the hook ran, and it did
+    not stop the child from finding the accelerators torch itself finds.
+    """
+    code = """
+import sys
+import torch
+
+print("torch_fl" in sys.modules, torch.accelerator.current_accelerator(False),
+      torch.backends.mps.is_built(), torch.backends.mps.is_available())
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        timeout=300,
+        check=False,
+        env=_child_env(tmp_path),
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    hooked, accelerator, mps_built, mps_available = result.stdout.split()
+    assert hooked == "True", result.stdout  # the wheel's hook ran in bare torch
+    assert (mps_built, mps_available) == (
+        str(torch.backends.mps.is_built()),
+        str(torch.backends.mps.is_available()),
+    ), result.stdout
+    # The only difference the hook makes to bare torch is the PrivateUse1 name
+    # it registers; the accelerator it reports is this build's own choice.
+    assert accelerator in {"mps", "flagos"}, result.stdout

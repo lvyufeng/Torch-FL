@@ -35,7 +35,7 @@ of the cross-backend test contract.
 
 The second path only exists in a wheel that carries the generated CUDA boxing
 kernels. Boxing is off by default for every CUDA-ABI platform (#520) and the
-CUDA lane builds that default wheel, so on it the ops `backends_cuda.conf`
+CUDA lane builds that default wheel, so on it the ops `backends_nvidia.conf`
 routes to `cuda` -- `normal_`, `randint`, `randperm`, `log_normal_` and the
 `*_out`/`.generator` overloads -- reach cpu_fallback instead. The cases that
 assert the boxing path's translation behaviour are therefore gated on the build
@@ -43,7 +43,7 @@ record (`_boxing_built()`), the same way the `cuda` marker is gated in
 `tests/integration/ops/conftest.py`, rather than on the accelerator name: the
 two stopped being interchangeable when boxing became an opt-in.
 
-That wheel is not unclaimed everywhere. `backends_cuda.conf` routes `rand`,
+That wheel is not unclaimed everywhere. `backends_nvidia.conf` routes `rand`,
 `randn`, the two `_like` factories and `uniform_` to a FlagGems arm, and the
 factory path goes along with it: `torch.rand(..., generator=)` has no
 PrivateUse1 kernel of its own, so the composite fills a device tensor and calls
@@ -59,10 +59,14 @@ Usage:
     pytest tests/integration/ops/test_rng_dispatch.py -v
 """
 
+import warnings
+
 import pytest
 
 import torch
 import torch_fl  # noqa: F401
+
+from backend_conf import route_is_served
 
 
 def _is_musa() -> bool:
@@ -99,12 +103,30 @@ def _device_rng_reads_flagos_seed() -> bool:
     """
     if torch_fl._build_accelerator() in ("ascend", "gcu", "musa", "kunlunxin"):
         return True
+    if torch_fl._build_accelerator() == "ppu" and not _boxing_built():
+        # FlagGems-primary PPU: the RNG ops are CPU-backed (flag_gems names a
+        # `cpp`/cpu generator for rand, multinomial, bernoulli_ and the
+        # explicit-generator tests' op), so a caller's generator must be the
+        # cpu one the kernel accepts -- the boxing prelude that would have
+        # translated a device generator is not in this wheel.
+        return False
     return _boxing_built()
 
 
 def _supports_flagos_generator() -> bool:
     """The generator-acceptance face of ``_device_rng_reads_flagos_seed``."""
     return _device_rng_reads_flagos_seed()
+
+
+def _device_rng_accepts_device_generator() -> bool:
+    """True when a device generator is consumed rather than rejected.
+
+    A flagos one counts (_supports_flagos_generator), and so does a cuda one on
+    the boxing builds whose prelude translates it. Everything else -- the
+    FlagGems-primary wheels behind a CPU-seeded kernel, PPU included -- only
+    takes a cpu generator.
+    """
+    return _supports_flagos_generator() or _boxing_built()
 
 
 #: The conf backends whose route ends in a FlagGems kernel.
@@ -128,6 +150,64 @@ def _conf_route(op: str) -> str:
             if sep and name.strip() == op:
                 return value.strip()
     return ""
+
+
+def _route_to_cpu_fallback(op: str) -> bool:
+    """True when a boxing wheel leaves ``op`` unregistered, to cpu_fallback.
+
+    Since #643 a default conf never routes `boxing`, and a boxing build claims
+    only the ops the conf routes somewhere other than `none`
+    (`generated/register_boxing_<platform>.inc`): claiming an unrouted op makes
+    the dispatcher raise instead of falling back. The per-op knob that turns
+    this into a red lane is whether the *wheel* compiled the route's backend,
+    not whether the conf names one -- `route_is_served` in backend_conf.py says
+    the same thing for the dispatch-log tests.
+
+    Two routes land here and both are asserted below: a `none`/unlisted route,
+    and a route to a backend this wheel did not compile (the metax lane, run
+    40129896922: its `backends_metax_boxing.conf` routes `normal_` to boxing
+    while the wheel ships `KERNELS=("flaggems","vendor")`, so a flagos
+    generator reached FlagGems' cpu-backed kernel and was rejected).
+    """
+    if not _boxing_built():
+        return False
+    return not route_is_served(op)
+
+
+def _skip_if_random_leaves_the_device(op):
+    """Skip a draw whose op this wheel does not serve on the device at all.
+
+    The two reproducibility cases below draw from every op in the catalogue,
+    and a draw whose op is unregistered here does not come back flagged: it
+    reaches ATen's `random()` dispatch stub through cpu_fallback, and a
+    CPU-only torch has no kernel there -- "DispatchStub: missing kernel for
+    cuda" (NVIDIA lane, run 40146671425: 29 failures, `multinomial`, `random_`,
+    `randint`, `randperm` and their out variants).
+
+    `op()` alone answers a different question, and it answered wrong: the
+    draws that got past it failed in the warmup's `.float()` (run 40147673906,
+    the same 29), which is where the boxed read of the drawn tensor -- not
+    the draw -- reached the stub. So the probe runs the draw exactly as the
+    cases do. That is the narrowest form of the question and the one that
+    cannot go stale: a draw this wheel cannot serve raises, a served one
+    returns.
+    """
+    try:
+        _draw(op, SEED)
+    except (NotImplementedError, RuntimeError) as exc:
+        if "not implemented" not in str(exc) and "DispatchStub" not in str(exc):
+            raise
+        pytest.skip(f"draw reaches cpu_fallback on this wheel: {exc}")
+
+
+#: The routeless draw paths a boxing wheel leaves to cpu_fallback. `normal_` is
+#: the in-place draw the generator tests below use; `rand` is the factory one,
+#: which reaches the device through `uniform_`.
+_UNROUTED_DRAWS = pytest.mark.skipif(
+    _route_to_cpu_fallback("normal_") or _route_to_cpu_fallback("uniform_"),
+    reason="a boxing wheel leaves the draw unregistered and cpu_fallback takes "
+    "a cpu generator, so the flagos generator cannot be honoured",
+)
 
 
 def _factory_rng_served_by_flag_gems() -> bool:
@@ -177,9 +257,62 @@ def _empty(n=64, dtype=torch.float32, device=DEVICE):
     return torch.empty(n, dtype=dtype, device=device)
 
 
+def _require_device_arithmetic(*operations):
+    """Skip when a device dtype conversion or scalar multiply leaves the device.
+
+    A boxing decision that is the test's own -- comparing two devices' results,
+    scaling a mask to the dropout output's dtype -- is not part of the RNG
+    contract, but on a wheel whose conf routes the unary to ``none`` each of
+    them reaches cpu_fallback, and a CPU-only torch has no copy or mul kernel
+    for a non-CPU tensor there. Probe the exact expressions rather than the ops
+    by name: a route that changes still answers correctly, and the ones that
+    cannot run skip with the exception that proves it.
+    """
+    for operation in operations:
+        try:
+            operation()
+        except (NotImplementedError, RuntimeError) as exc:
+            if "not implemented" not in str(exc) and "DispatchStub" not in str(exc):
+                raise
+            pytest.skip(f"device arithmetic reaches cpu_fallback on this wheel: {exc}")
+
+
 def _draw(op, seed):
     torch.manual_seed(seed)
     return op().float().cpu()
+
+
+def _generator_device_rejection() -> RuntimeError | None:
+    """The rejection this wheel gives a flagos generator on a device RNG op, if any.
+
+    Asked, not assumed: this backend's RNG either accepts ``Generator(device=
+    "flagos")`` or refuses it, and which of the two it is does not follow from
+    the build record on every vendor. A draw that returns here means the wheel
+    accepts the generator, which is the outcome the three generator cases below
+    record rather than contradict -- the contract they guard is that the
+    generator is honoured, not that it is refused. A refusal still has to be
+    the documented one.
+    """
+    gen = torch.Generator(device="flagos").manual_seed(99)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        try:
+            _empty(8).normal_(generator=gen)
+        except RuntimeError as exc:
+            if "device type for generator" not in str(exc):
+                raise
+            return exc
+    return None
+
+
+def _skip_if_generator_is_accepted(rejection) -> None:
+    """Skip a rejection case on a wheel whose RNG accepts the flagos generator."""
+    if rejection is None:
+        pytest.skip(
+            "this wheel's device RNG accepts a flagos generator, so there is "
+            "no rejection to assert; the generator-honouring cases below cover "
+            "the acceptance"
+        )
 
 
 def _explicit_generator(seed):
@@ -199,10 +332,22 @@ def _explicit_generator(seed):
     """
     if _supports_flagos_generator():
         return torch.Generator(device="flagos").manual_seed(seed)
+    if _generator_device_rejection() is None:
+        # The build record does not list this vendor among the ones that read
+        # the flagos seed, but its RNG accepts a flagos generator all the same
+        # (gcu). Asking the device is the only answer that holds for every
+        # wheel; handing such a vendor the cpu generator below fails every call.
+        return torch.Generator(device="flagos").manual_seed(seed)
     try:
         gen = torch.Generator(device="cuda")
     except RuntimeError:
         gen = torch.Generator()  # cpu
+    else:
+        if not _device_rng_accepts_device_generator():
+            # The choice above is not a guard: a FlagGems-primary PPU wheel
+            # builds a cuda Generator fine and then rejects it in the flag_gems
+            # cpu-backed kernel ("Expected a 'cpu' device type for generator").
+            gen = torch.Generator()
     return gen.manual_seed(seed)
 
 
@@ -311,6 +456,7 @@ class TestRngReproducible:
     @pytest.mark.parametrize("name", list(_ALL_OPS))
     def test_same_seed_same_draw(self, name):
         op = _ALL_OPS[name]
+        _skip_if_random_leaves_the_device(op)
         assert torch.equal(_draw(op, SEED), _draw(op, SEED)), (
             f"{name} is not reproducible under torch.manual_seed -- it is most "
             f"likely falling back to ATen's own default generator instead of the "
@@ -325,6 +471,7 @@ class TestRngReproducible:
         # the original philox monkeypatch bug hid: it seeded once and ignored
         # later manual_seed calls. Seed-sensitivity is what rules that out.
         op = _ALL_OPS[name]
+        _skip_if_random_leaves_the_device(op)
         assert not torch.equal(_draw(op, SEED), _draw(op, OTHER_SEED)), (
             f"{name} ignores the seed -- same draw for two different seeds"
         )
@@ -366,6 +513,7 @@ class TestRngSeedSource:
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_flagos_generator_device_contract(self):
         gen = torch.Generator(device="flagos").manual_seed(99)
         if _supports_flagos_generator():
@@ -376,11 +524,13 @@ class TestRngSeedSource:
         else:
             # Backends whose native kernels use a different generator contract
             # reject a flagos generator rather than silently changing streams.
+            _skip_if_generator_is_accepted(_generator_device_rejection())
             with pytest.raises(RuntimeError, match="device type for generator"):
                 _empty(8).normal_(generator=gen)
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_flagos_generator_factory_contract(self):
         gen = torch.Generator(device="flagos").manual_seed(99)
         if _supports_flagos_generator():
@@ -398,11 +548,13 @@ class TestRngSeedSource:
                 "rejecting it"
             )
         else:
+            _skip_if_generator_is_accepted(_generator_device_rejection())
             with pytest.raises(RuntimeError, match="device type for generator"):
                 torch.rand(8, device=DEVICE, generator=gen)
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_flagos_generator_leaves_shared_generator_untouched(self):
         # On CUDA boxing, accepting a flagos generator works by translation:
         # a *clone* of the shared CUDA generator is reseeded per call. If it
@@ -424,6 +576,7 @@ class TestRngSeedSource:
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_flagos_generator_translation_advances_state(self):
         # The contract tests above reseed between draws; this pins the other
         # half of generator semantics on CUDA boxing: two consecutive draws
@@ -451,6 +604,7 @@ class TestRngSeedSource:
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_explicit_generator_is_honoured(self):
         # Injection must only fill an *absent* generator. A caller-supplied one
         # keeps its own stream, reproducible on its own terms.
@@ -462,6 +616,7 @@ class TestRngSeedSource:
 
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
+    @_UNROUTED_DRAWS
     def test_explicit_generator_isolated_from_manual_seed(self):
         gen = _explicit_generator(5)
         a = _empty().normal_(generator=gen).cpu()
@@ -487,6 +642,7 @@ class TestRngSeedSource:
     @pytest.mark.anyplatform
     @pytest.mark.main_ops
     @_NEEDS_DEVICE_RNG
+    @_UNROUTED_DRAWS
     def test_rng_state_round_trip(self):
         torch.flagos.manual_seed(SEED)
         state = torch.flagos.get_rng_state()
@@ -522,11 +678,29 @@ class TestRngSeedSource:
     def test_dropout_forward_backward_contract(self):
         torch.flagos.manual_seed(SEED)
         value = torch.ones((256,), device=DEVICE)
+        # native_dropout draws from `random_`, so a wheel that does not serve
+        # that draw cannot run the contract at all (CUDA lane, run
+        # 40148742285); the probe is the same one the catalogue uses. It takes
+        # the first element of the tuple: the probe warms up with `.float()`,
+        # which a two-output op has no single answer for (Kunlunxin lane, run
+        # 40149862610).
+        _skip_if_random_leaves_the_device(
+            lambda: torch.ops.aten.native_dropout(value, 0.25, True)[0]
+        )
         output, mask = torch.ops.aten.native_dropout(value, 0.25, True)
         assert output.device == torch.device(DEVICE)
         assert mask.device == torch.device(DEVICE)
         assert mask.dtype == torch.bool
         assert torch.equal(output.ne(0), mask)
+        # The draw can be served while the *comparison* is not: every unary here
+        # leaves the device through cpu_fallback, and a CPU-only torch has no
+        # float->float copy kernel for it -- "DispatchStub: missing kernel for
+        # cuda" at `mask.to(output.dtype)` (NVIDIA lane, run 40154845873). The
+        # contract is a device one, so skip where the wheel cannot express it.
+        _require_device_arithmetic(
+            lambda: mask.to(output.dtype) * (1.0 / 0.75),
+            lambda: mask.to(torch.float32) * 4.0,
+        )
         expected = mask.to(output.dtype) * (1.0 / 0.75)
         assert torch.allclose(output, expected)
 
@@ -592,6 +766,7 @@ class TestRngMultiDevice:
             "randperm": lambda: torch.randperm(50, device=dev),
         }
         op = ops[name]
+        _skip_if_random_leaves_the_device(op)
         assert torch.equal(_draw(op, SEED), _draw(op, SEED))
         assert not torch.equal(_draw(op, SEED), _draw(op, OTHER_SEED))
 
@@ -642,9 +817,12 @@ class TestRngMultiDevice:
         "from Triton (cpu tensor?)' on flagos:1..7, fine on flagos:0. A device-context "
         "bug on the FlagGems Triton path rather than an RNG one: the same op on the "
         "native path is reproducible on every device. xfail (non-strict) so the "
-        "eventual fix surfaces as an xpass instead of being silently assumed.",
+        "eventual fix surfaces as an xpass instead of being silently assumed. "
+        "RuntimeError is in `raises` because on a wheel that registers no CUDA "
+        "kernel for multinomial (FlagGems-first, boxing off) the same op fails "
+        "earlier with 'DispatchStub: missing kernel for cuda'.",
         strict=False,
-        raises=(ValueError, AssertionError),
+        raises=(ValueError, AssertionError, RuntimeError),
     )
     def test_multinomial_on_second_device(self):
         dev = self._second_device()

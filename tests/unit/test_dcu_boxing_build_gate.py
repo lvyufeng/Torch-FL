@@ -50,7 +50,7 @@ def test_flagos_provider_publication_requires_binary_capability(enabled, monkeyp
             for a in n.test.args
         )
     )
-    provider = types.ModuleType("torch_fl.accelerator.dcu.dcu_stream")
+    provider = types.ModuleType("torch_fl.accelerator.hygon.dcu_stream")
     for name in (
         "DcuEvent",
         "DcuExternalStream",

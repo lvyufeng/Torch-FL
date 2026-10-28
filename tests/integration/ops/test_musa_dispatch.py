@@ -14,7 +14,7 @@
 
 """Moore Threads MUSA routing tests.
 
-The per-op files in this directory assert a ``-> cuda`` routing that MUSA builds
+The per-op files in this directory assert a ``-> boxing`` routing that MUSA builds
 cannot produce: no CUDA boxing kernels are compiled in (the platform ships no
 cudart), so those tests are skipped by conftest's platform gate. This file is the
 MUSA equivalent -- it checks that ops land on accelerated backends (FlagGems or
@@ -1071,6 +1071,9 @@ def _assert_ran_on_musa(result: subprocess.CompletedProcess, ops: tuple) -> None
     assert result.returncode == 0, f"probe failed:\n{result.stdout}{result.stderr}"
     assert "PROBE OK" in result.stdout, result.stdout
     for op in ops:
+        # The log prints "musa" (dispatcher.h's LogDispatch), not the conf's
+        # `mthreads` spelling -- the two vocabularies are separate on purpose,
+        # and backend_conf._LOG_NAME owns the mapping.
         assert f"[flagos dispatch] {op} -> musa" in result.stderr, (
             f"{op} did not reach the mudnn backend, so this proves nothing:\n"
             f"{result.stderr}"

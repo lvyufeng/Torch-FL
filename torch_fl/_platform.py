@@ -37,7 +37,7 @@ Two functions:
 ``detect_platform()``
     The platform *name* the integration contracts use, resolving the build
     record first, then PPU's markers (older PPU wheels report cuda), then the
-    ``lib/flagos_platform`` marker and the ``lib_ppu`` bundle dir, then the
+    ``lib/flagos_platform`` marker and the ``lib_thead`` bundle dir, then the
     selected conf, and finally ``DEFAULT_PLATFORM``.
 """
 
@@ -54,36 +54,65 @@ from pathlib import Path
 #: bucket must name it itself rather than rely on this falling through.
 DEFAULT_PLATFORM = "cuda"
 
-#: Build-record accelerator -> platform name. "maca" is the older MetaX spelling.
-_ACCELERATOR_TO_PLATFORM = {
+#: Platform name -> vendor layer, mirroring ``vendor`` in
+#: cmake/flagos_platforms.json. The vendor is the stable, public half of a
+#: platform's name: it is what FLAGOS_ACCELERATOR accepts and, where the platform
+#: publishes, exactly the ``<lane>`` of flagos-pypi-<lane>. The platform name
+#: stays the build-table id (cuda, dcu, ...), because CMake, setup.py, the wheel
+#: filename and the CI lane files all key on it; a rename of those is its own
+#: change. The chip layer (Ascend 310B/910B, ...) is source-only and never
+#: appears here. A test keeps this table and the JSON equal.
+PLATFORM_VENDOR = {
     "ascend": "ascend",
-    "dcu": "dcu",
-    "metax": "metax",
-    "maca": "metax",
-    "musa": "musa",
-    "gcu": "gcu",
-    "ppu": "ppu",
-    "kunlunxin": "kunlunxin",
+    "mps": "apple",
+    "bpu": "drobotics",
+    "dcu": "hygon",
+    "gcu": "enflame",
     "iluvatar": "iluvatar",
-    "mps": "mps",
+    "kunlunxin": "kunlunxin",
+    "metax": "metax",
+    "musa": "mthreads",
+    "cuda": "nvidia",
+    "ppu": "thead",
     "tsingmicro": "tsingmicro",
 }
 
+#: Vendor layer -> platform name. A FLAGOS_ACCELERATOR may name either half.
+_VENDOR_TO_PLATFORM = {vendor: platform for platform, vendor in PLATFORM_VENDOR.items()}
+
+#: Build-record accelerator -> platform name. "maca" is the older MetaX spelling,
+#: and older records carry the platform id itself (cuda, dcu, ...); a record
+#: written by a newer build may carry the vendor name. Both resolve here.
+_ACCELERATOR_TO_PLATFORM = {
+    **{platform: platform for platform in PLATFORM_VENDOR},
+    **_VENDOR_TO_PLATFORM,
+    "maca": "metax",
+}
+# A record that reads "cuda" is ambiguous: it is both NVIDIA's platform id and
+# the value older builds wrote for a PPU wheel that predated its own id. Those
+# wheels are identified by PPU_SDK / the lib_thead bundle, so the record alone must
+# NOT answer for them -- only a non-identity record (a vendor name, or a platform
+# id that is not also a fallback value) short-circuits detect_platform().
+_AMBIGUOUS_ACCELERATORS = frozenset({"cuda"})
+
 #: Conf-name fragments, matched in order, for the last-resort case where the
-#: marker and the record are both absent. "cuda" is last so a vendor conf that
-#: happens to mention it cannot win over its own name.
-_CONF_PLATFORM_FRAGMENTS = (
+#: marker and the record are both absent. "nvidia" is last so a vendor conf that
+#: happens to mention it cannot win over its own name. These are the conf file
+#: names (backends_<vendor>.conf), so they are vendor names; each maps back to its
+#: platform through _VENDOR_TO_PLATFORM, because detect_platform() answers in
+#: platform ids.
+_CONF_VENDOR_FRAGMENTS = (
     "ascend",
     "metax",
-    "musa",
-    "gcu",
-    "dcu",
-    "ppu",
+    "mthreads",
+    "enflame",
+    "hygon",
+    "thead",
     "kunlunxin",
     "iluvatar",
-    "mps",
+    "apple",
     "tsingmicro",
-    "cuda",
+    "nvidia",
 )
 
 
@@ -122,6 +151,40 @@ def build_accelerator() -> str:
     return str(getattr(module, "ACCELERATOR", "")).strip().lower()
 
 
+def _alias_record(package: Path) -> str:
+    """``torch_fl/_platform_alias.py``'s platform id ("" when unreadable)."""
+    path = package / "_platform_alias.py"
+    try:
+        loader = importlib.machinery.SourceFileLoader(
+            "_flagos_platform_alias", str(path)
+        )
+        module = importlib.util.module_from_spec(
+            importlib.util.spec_from_loader(loader.name, loader)
+        )
+        loader.exec_module(module)
+    except (OSError, ImportError, SyntaxError):
+        return ""
+    return str(getattr(module, "ACCELERATOR", "")).strip().lower()
+
+
+def platform_for(name: str) -> str:
+    """The platform a ``FLAGOS_ACCELERATOR`` (or build record) value names.
+
+    Accepts both halves of the name: the vendor (``nvidia``, ``hygon``,
+    ``mthreads``, ``enflame``, ``thead``, ``drobotics``, ``apple``) and the
+    platform id it belongs to (``cuda``, ``dcu``, ``musa``, ``gcu``, ``ppu``,
+    ``bpu``, ``mps``). ``""`` for an unknown name, which callers report as the
+    error they already did -- a second, differently-worded "unknown accelerator"
+    message here would be the two-copies problem this module exists to avoid.
+    """
+    return _ACCELERATOR_TO_PLATFORM.get(name.strip().lower(), "")
+
+
+def vendor_for(platform: str) -> str:
+    """The vendor layer of a platform name ("" if the platform is unknown)."""
+    return PLATFORM_VENDOR.get(platform, "")
+
+
 def _resolved_conf() -> str:
     """The conf torch_fl resolved, or the FLAGOS_BACKEND_CONFIG the user set.
 
@@ -140,30 +203,36 @@ def _resolved_conf() -> str:
 
 def detect_platform() -> str:
     """The active platform name, resolved as documented in the module docstring."""
-    platform = _ACCELERATOR_TO_PLATFORM.get(build_accelerator())
-    if platform:
-        return platform
+    accelerator = build_accelerator()
+    if accelerator not in _AMBIGUOUS_ACCELERATORS:
+        platform = _ACCELERATOR_TO_PLATFORM.get(accelerator)
+        if platform:
+            return platform
 
     # PPU signals come before the marker: a PPU wheel predating its own build-record
-    # value reports cuda and ships no lib/flagos_platform marker (CMake writes that
-    # only for gcu/musa/bpu/ascend), so PPU_SDK and the lib_ppu/ bundle are what
-    # identify it.
+    # value reports cuda, whose row writes no lib/flagos_platform marker, so
+    # PPU_SDK is what identifies it.
     if os.environ.get("PPU_SDK") or Path("/usr/local/PPU_SDK").is_dir():
         return "ppu"
 
     package = _torch_fl_package_dir()
     if package is not None:
+        # The build record's twin: the row this wheel was built for, in the
+        # table's spelling whatever name the build was told (`metax` is both a
+        # row and its vendor, and the row is `metax`).
+        if (package / "_platform_alias.py").is_file():
+            return _alias_record(package) or DEFAULT_PLATFORM
         try:
             marker = (package / "lib" / "flagos_platform").read_text().strip().lower()
         except OSError:
             marker = ""
         if marker:
             return marker
-        if (package / "lib_ppu").is_dir():
+        if (package / "lib_thead").is_dir():
             return "ppu"
 
     config = _resolved_conf().lower()
-    for fragment in _CONF_PLATFORM_FRAGMENTS:
+    for fragment in _CONF_VENDOR_FRAGMENTS:
         if fragment in config:
-            return fragment
+            return _VENDOR_TO_PLATFORM[fragment]
     return DEFAULT_PLATFORM

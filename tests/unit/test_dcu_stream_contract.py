@@ -67,7 +67,7 @@ def runtime(monkeypatch):
     monkeypatch.setitem(sys.modules, "torch", torch)
     monkeypatch.setitem(sys.modules, "torch_fl", package)
     spec = importlib.util.spec_from_file_location(
-        "_test_dcu_stream_contract", ROOT / "torch_fl/accelerator/dcu/dcu_stream.py"
+        "_test_dcu_stream_contract", ROOT / "torch_fl/accelerator/hygon/dcu_stream.py"
     )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
@@ -264,7 +264,7 @@ def test_cuda_interface_uses_one_actual_provider(runtime, monkeypatch, provider)
     torch._dynamo = dynamo
     monkeypatch.setitem(sys.modules, "torch._dynamo", dynamo)
     monkeypatch.setitem(sys.modules, "torch._dynamo.device_interface", di)
-    stream_package = "torch_fl.accelerator.dcu.dcu_stream"
+    stream_package = "torch_fl.accelerator.hygon.dcu_stream"
     monkeypatch.setitem(sys.modules, stream_package, runtime.module)
     tree = ast.parse(
         (ROOT / "torch_fl/compile/device_interface.py").read_text(encoding="utf-8")
@@ -277,7 +277,7 @@ def test_cuda_interface_uses_one_actual_provider(runtime, monkeypatch, provider)
     )
     namespace = {
         "torch": torch,
-        "platform_profile": lambda: types.SimpleNamespace(vendor="dcu"),
+        "platform_profile": lambda: types.SimpleNamespace(vendor="hygon"),
     }
     exec(
         compile(

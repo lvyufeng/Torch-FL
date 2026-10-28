@@ -378,10 +378,10 @@ git commit -m "docs: add configuration and contribution references"
 - Reference: `README.md:224-465`
 - Reference: `.github/configs/{cuda,metax,dcu}.yml`
 - Reference: `.github/scripts/set_env_{cuda,metax,dcu}.sh`
-- Reference: `scripts/vendor/with_cuda_libtorch.sh`
-- Reference: `scripts/vendor/bundle_maca_libtorch.sh`
-- Reference: `scripts/vendor/bundle_ppu_libtorch.sh`
-- Reference: `scripts/vendor/bundle_dcu_libtorch.sh`
+- Reference: `scripts/vendor/with_nvidia_libtorch.sh`
+- Reference: `scripts/vendor/bundle_metax_libtorch.sh`
+- Reference: `scripts/vendor/bundle_thead_libtorch.sh`
+- Reference: `scripts/vendor/bundle_hygon_libtorch.sh`
 - Reference: `docs/vendors/cuda/external-libtorch-cuda.md`
 
 **Interfaces:**
@@ -393,7 +393,7 @@ git commit -m "docs: add configuration and contribution references"
 Create `docs/vendors/cuda/installation.md` with:
 
 - supported route: CPU PyTorch plus bundled/external CUDA libtorch compatibility-key boxing, with optional FlagGems compiler kernels;
-- prerequisites and exact source installation flow verified against `.github/scripts/set_env_cuda.sh` and `setup.py`;
+- prerequisites and exact source installation flow verified against `.github/scripts/set_env_nvidia.sh` and `setup.py`;
 - a basic verification command using `device="flagos:0"`;
 - operator, FlagGems, Qwen3, compile, distributed, and profiler validation commands only where current tests/CI support them;
 - troubleshooting limited to verified import/asset and version-pin failures;
@@ -427,7 +427,7 @@ Remove temporary troubleshooting detail that cannot be reproduced from repositor
 
 - [ ] **Step 4: Write the DCU guide**
 
-Create `docs/vendors/dcu/installation.md` from `README.md:339-465`, `setup.py`, the DCU bundle script, and `.github/configs/dcu.yml`. Include:
+Create `docs/vendors/dcu/installation.md` from `README.md:339-465`, `setup.py`, the DCU bundle script, and `.github/configs/hygon.yml`. Include:
 
 - DTK/hipified-PyTorch compatibility-key boxing architecture;
 - `ACCELERATOR=dcu` installation and `DTK_ROOT`/`ROCM_PATH` precedence;

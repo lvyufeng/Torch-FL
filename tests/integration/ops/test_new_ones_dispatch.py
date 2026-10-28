@@ -45,6 +45,23 @@ DEVICE = "flagos:0"
 _PACKAGE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(torch_fl.__file__)))
 
 
+#: The dispatch name GCU's native slot prints. The conf names it `enflame`
+#: (Backend::kEnflame), the log prints `gcu` (csrc/aten/dispatcher.h:
+#: LogDispatch) -- asserted against the log, so it is the latter.
+_GCU_LOG_NAME = "gcu"
+
+
+def _dispatched_to_gcu(stderr: str, op: str) -> bool:
+    """True when the log shows `op -> gcu` with no FlagGems route for it.
+
+    Both spellings of the question are logged for the same call when the vendor
+    slot answered through the fallback inside the kernel, so the line for `op`
+    itself is what decides -- a plain substring test on `flagos_python` would
+    also match lines for other ops in the same child.
+    """
+    return f"[flagos dispatch] {op} -> {_GCU_LOG_NAME}" in stderr
+
+
 def _run_child(code: str, extra_env: dict | None = None) -> subprocess.CompletedProcess:
     """Run `code` in a child pinned to the `torch_fl` this session imported."""
     env = os.environ.copy()
@@ -110,7 +127,7 @@ class TestNewOnesDispatch:
         if result.returncode != 0 and "backend not registered" in result.stderr:
             pytest.skip("cuda backend not available in this build")
         assert result.returncode == 0, f"Failed:\n{result.stderr}"
-        assert "[flagos dispatch] new_ones -> cuda" in result.stderr
+        assert "[flagos dispatch] new_ones -> boxing" in result.stderr
 
     @pytest.mark.metax
     def test_dispatch_log_metax(self):
@@ -164,8 +181,8 @@ class TestNewOnesGcuRoute:
             {"FLAGOS_LOG": "dispatch"},
         )
         assert result.returncode == 0, f"Failed:\n{result.stderr}"
-        assert "[flagos dispatch] new_ones -> gcu" in result.stderr
-        assert "flagos_python" not in result.stderr
+        assert _dispatched_to_gcu(result.stderr, "new_ones"), result.stderr
+        assert "[flagos dispatch] new_ones -> flagos_python" not in result.stderr
 
     @pytest.mark.gcu
     def test_accepted_dtypes_skip_the_composite(self):
@@ -180,7 +197,7 @@ class TestNewOnesGcuRoute:
             {"FLAGOS_LOG": "dispatch"},
         )
         assert result.returncode == 0, f"Failed:\n{result.stderr}"
-        assert "[flagos dispatch] new_ones -> gcu" in result.stderr
+        assert _dispatched_to_gcu(result.stderr, "new_ones"), result.stderr
         # The vendor entry point writes the plane itself; nothing fills.
         assert "fill_.Scalar" not in result.stderr
 

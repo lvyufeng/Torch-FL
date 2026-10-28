@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """Generate the MUSA FlagGems registration list.
 
-``csrc/aten/backends/musa/generated/musa_flaggems_register.inc`` claims the
-FlagGems Python ops on PrivateUse1 so that ``backends_musa.conf`` can route them
+``csrc/aten/backends/mthreads/generated/musa_flaggems_register.inc`` claims the
+FlagGems Python ops on PrivateUse1 so that ``backends_mthreads.conf`` can route them
 to the ``flaggems`` backend. ``musa_register.inc`` only covers the ops mudnn has
 a kernel for, so without this file most FlagGems routes have no registered slot:
 the call does not box to CPU, it reaches the dispatcher's empty ``kFlagGems``
 slot and raises "backend not registered".
 
-The list is ``FLAGGEMS_PYTHON_OPS`` minus ``NATIVE_TRITON_GAPS['musa']``, minus
-``FLAGGEMS_PENDING_NATIVE_OPS`` (for as long as ``musa`` is in
+The list is ``FLAGGEMS_PYTHON_OPS`` minus ``NATIVE_TRITON_GAPS['mthreads']``, minus
+``FLAGGEMS_PENDING_NATIVE_OPS`` (for as long as ``mthreads`` is in
 ``FLAGGEMS_PENDING_NATIVE_VENDORS``), minus whatever ``musa_register.inc``
 already claims. Each op is emitted with the
 wrapper symbol read back from the CUDA codegen's ``generated/register.inc``
@@ -38,11 +38,10 @@ from pathlib import Path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import gen_vendor_confs as g  # noqa: E402
-from backend_coverage import FLAGGEMS_PYTHON_OPS  # noqa: E402
 from codegen_mudnn import REGISTER_INC, wrapper_map  # noqa: E402
 
 REPO = Path(__file__).resolve().parent.parent.parent
-OUT_INC = REPO / "csrc/aten/backends/musa/generated/musa_flaggems_register.inc"
+OUT_INC = REPO / "csrc/aten/backends/mthreads/generated/musa_flaggems_register.inc"
 
 INC_HEADER = """\
 // Copyright (c) 2026, BAAI. All rights reserved.
@@ -61,7 +60,7 @@ INC_HEADER = """\
 // Ops already claimed by musa_register.inc are omitted here: a second m.impl()
 // for the same op and dispatch key only overrides the first and warns at import.
 //
-// Excluded below NATIVE_TRITON_GAPS['musa'] (scripts/codegen/gen_vendor_confs.py), each
+// Excluded below NATIVE_TRITON_GAPS['mthreads'] (scripts/codegen/gen_vendor_confs.py), each
 // one measured failing on MTT S5000 rather than assumed; see the comment on
 // that set for the diagnosis behind every entry.
 """
@@ -77,16 +76,19 @@ def target_ops() -> list:
         )
 
     native = g.registered_impls(
-        REPO / "csrc/aten/backends/musa/generated/musa_register.inc"
+        REPO / "csrc/aten/backends/mthreads/generated/musa_register.inc"
     )
-    gaps = g.NATIVE_TRITON_GAPS.get("musa", set())
+    gaps = g.NATIVE_TRITON_GAPS.get("mthreads", set())
     pending = (
         g.FLAGGEMS_PENDING_NATIVE_OPS
-        if "musa" in g.FLAGGEMS_PENDING_NATIVE_VENDORS
+        if "mthreads" in g.FLAGGEMS_PENDING_NATIVE_VENDORS
         else frozenset()
     )
 
-    wanted = (set(FLAGGEMS_PYTHON_OPS) - gaps) - native - pending
+    # This platform's ceiling, not the shared one: only cuda reads the widened
+    # set, so anything else here asks for wrappers register.inc does not have.
+    flaggems_py = g.flaggems_python_ops_for("mthreads")
+    wanted = (set(flaggems_py) - gaps) - native - pending
     unknown = sorted(wanted - set(wrappers))
     if unknown:
         raise SystemExit(
@@ -97,7 +99,7 @@ def target_ops() -> list:
 
     return (
         sorted(wanted),
-        sorted((native & set(FLAGGEMS_PYTHON_OPS)) - pending),
+        sorted((native & set(flaggems_py)) - pending),
         sorted(gaps),
     )
 

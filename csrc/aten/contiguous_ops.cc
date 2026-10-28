@@ -18,16 +18,16 @@
 // Kunlunxin header is native like them but has no such fallback, so it is
 // guarded and only pulled in for the platform that defines USE_KUNLUNXIN.
 #include "backends/ascend/ascend_copy.h"
-#include "backends/gcu/gcu_copy.h"
+#include "backends/enflame/gcu_copy.h"
 #if defined(USE_KUNLUNXIN)
 #include "backends/kunlunxin/kunlunxin_copy.h"
 #endif
 #if defined(USE_MPS)
-#include "backends/mps/mps_copy.h"
+#include "backends/apple/mps_copy.h"
 #endif
 
 #if defined(FLAGOS_MUSA_KERNEL)
-#include "backends/musa/mudnn_common.h"
+#include "backends/mthreads/mudnn_common.h"
 #endif
 
 // Whether the CUDA-platform arms of contiguous()/clone() below may hand the
@@ -170,6 +170,15 @@ void copy_strided_via_host(
 #if defined(USE_MPS)
 namespace {
 
+// Clone's contiguous fast path needs an allocation without dispatching the
+// like-factory, which has no PrivateUse1 kernel on MPS. Keeping this helper
+// on the device preserves the semantics of clone: a fresh dense allocation.
+at::Tensor empty_like_dense(const at::Tensor& self) {
+  const auto sizes = self.sizes().vec();
+  const auto strides = self.strides().vec();
+  return at::empty_strided(sizes, strides, self.options());
+}
+
 void finish_strided_copy(
     const at::Tensor& self,
     const at::Tensor& result,
@@ -270,7 +279,11 @@ at::Tensor clone(
 
   if (memory_format == c10::MemoryFormat::Preserve) {
     if (self.is_contiguous()) {
+#if defined(USE_MPS)
+      auto result = empty_like_dense(self);
+#else
       auto result = at::empty_like(self);
+#endif
       size_t nbytes = self.numel() * self.element_size();
       if (nbytes > 0 && self.is_privateuseone()) {
 #ifdef FLAGOS_DCU_VENDOR_STREAMS

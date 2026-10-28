@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import ctypes
+import functools
 import os
 import re
 import sys
@@ -43,22 +44,22 @@ def _build_accelerator() -> str:
 
 
 def _is_ppu_build() -> bool:
-    """True for a PPU wheel, which needs backends_ppu.conf rather than CUDA's.
+    """True for a PPU wheel, which needs backends_thead.conf rather than CUDA's.
 
     PPU has its own value in the build record's ACCELERATOR now (it is a CUDA-ABI
     boxing vendor like MetaX/DCU), so the record already answers this -- no
-    environment probe. The lib_ppu/ bundle directory stays as a fallback so a
+    environment probe. The lib_thead/ bundle directory stays as a fallback so a
     wheel built before PPU had an accelerator value of its own is still
     recognised.
 
-    Without this, PPU read backends_cuda.conf and inherited its FlagGems routes.
+    Without this, PPU read backends_nvidia.conf and inherited its FlagGems routes.
     That is what sent mm/bmm through the _hygon kernel PPU's triton cannot
     compile: 28 minutes inside a single test_mm and a SIGSEGV at interpreter
     exit, on a runner where every assertion still passed.
     """
-    if _build_accelerator() == "ppu":
+    if _build_accelerator() == "thead":
         return True
-    return os.path.isdir(os.path.join(os.path.dirname(__file__), "lib_ppu"))
+    return os.path.isdir(os.path.join(os.path.dirname(__file__), "lib_thead"))
 
 
 # The conf _select_backend_config() resolved, or "" when the user named one
@@ -83,77 +84,44 @@ def _mps_shutdown_allocator() -> None:
 def _select_backend_config() -> None:
     """Pick the op-routing config file for this build.
 
-    Every conf is backends_<platform>.conf -- one file per platform, no per-mode
-    suffix -- so the selection is a property of the build, not of an env var:
+    Every conf is backends_<vendor>.conf -- one file per platform, no per-mode
+    suffix -- so the selection is a property of the build, not of an env var.
+    The platform is read from the build record setup.py writes
+    (torch_fl/_build_config.py): the wheel records the platform it resolved
+    FLAGOS_ACCELERATOR to, and that record, not the environment and not a file
+    in the install directory, is what this reads.
 
-      * a native-kernel vendor marker -> backends_<that platform>.conf
-      * a MetaX build                 -> backends_metax.conf (boxing-only build)
-      * a DCU build                   -> backends_dcu.conf
-      * a Kunlunxin build             -> backends_kunlunxin.conf (native XPU)
-      * a PPU wheel                   -> backends_ppu.conf
-      * otherwise                     -> backends_cuda.conf
+    It used to read lib/flagos_platform first. That file is an install()
+    artifact in torch_fl/lib/, a directory no build cleans in a source tree
+    (and one the marker tests write "ascend"/"mps" into), so whichever platform
+    built there last decided the conf for every later build: a MetaX build that
+    inherited an "mps" marker read the empty backends_apple.conf and raised
+    "routed to 'none'" for every op that conf does not list. It is no longer
+    consulted, and builds that write no marker now remove a stale one.
 
-    There is no FlagGems opt-in left to apply. FLAGOS_USE_FLAGGEMS,
-    FLAGOS_USE_FLAGGEMS_CPP and FLAGOS_USE_TILEOPS each used to name a conf of
-    their own; every one of those files was the platform's own conf with one
-    backend column rewritten, which is why they could -- and did -- drift from it.
-    Each conf now states all five keys per op directly
-    (flaggems_cpp > flaggems > tileops > <vendor> > none), so the routing those
-    flags used to select is already in the file the platform reads.
+    What the build compiled in does not decide the file, only which entry
+    point an op takes once dispatched: flaggems_cpp is Backend::kFlagGemsCpp and
+    needs FLAGOS_BUILD_FLAGGEMS_CPP=ON (liboperators.so built for the vendor);
+    tileops is Backend::kTileOps and needs FLAGOS_BUILD_TILEOPS=ON plus an SM90
+    device. Where the slot is empty Dispatcher::GetFn degrades to the boxing
+    kernel rather than raising, so one file stays correct across both builds.
+    FLAGOS_FORCE_BACKEND survives as a table transform in common.cc
+    (ApplyForcedBackend): the tileops mode repins every op the conf annotates
+    `# tileops` onto that path, the same op set backends_tileops.conf used to
+    carry.
 
-    Which entry point an op actually takes is then decided by what got compiled
-    in, not by which file was read. flaggems_cpp is Backend::kFlagGemsCpp and needs
-    FLAGOS_BUILD_FLAGGEMS_CPP=ON (liboperators.so built for the vendor); tileops is
-    Backend::kTileOps and needs FLAGOS_BUILD_TILEOPS=ON plus an SM90 device. Where the
-    slot is empty Dispatcher::GetFn degrades to the boxing kernel rather than
-    raising, so one file stays correct across both builds. FLAGOS_FORCE_BACKEND
-    survives as a table transform in common.cc (ApplyForcedBackend): the tileops
-    mode repins every op the conf annotates `# tileops` onto that path, which is
-    the same op set backends_tileops.conf used to carry.
+    Every conf states all five keys per op directly
+    (flaggems_cpp > flaggems > tileops > <vendor> > none), and the generated
+    ones are full-coverage: backends_metax.conf routes 10 ops to flaggems_cpp
+    (the 15 in METAX_CPP_MEASURED minus the five that also sit in MetaX's triton
+    gap set, which the dispatcher checks first) and the rest to flaggems or
+    cpu_fallback; a conf whose routes a build cannot serve degrades at dispatch
+    rather than being swapped for another file.
 
-    backends_metax.conf routes 10 ops to flaggems_cpp: the 15 in
-    METAX_CPP_MEASURED minus the five that also sit in MetaX's triton gap set,
-    which the dispatcher checks first. `mm` and `_softmax`/`embedding` are left
-    out of the measured set deliberately -- `mm` because flag_gems' C++ mm kernel
-    passes a SPLIT_K kwarg triton-metax rejects, the other two because the
-    FlagGems build the MetaX lane installs ships no C++ half, so those routes
-    could not be served, and both ops reach the flaggems Python path instead.
-    Those 10 need a FlagGems built for MACA (cpp/ -DFLAGGEMS_BACKEND=MACA) linked
-    in; without it Dispatcher::GetFn sees an empty kFlagGemsCpp slot and boxes
-    them, which is why one file is safe for both builds.
-
-    Native-kernel vendors (musa, ascend, gcu, tsingmicro) do not take part in that
-    choice; each takes backends_<platform>.conf directly. For musa, ascend and gcu
-    that conf is generated full-coverage: every routable op appears exactly once,
-    already resolved by the priority flaggems_cpp > flaggems > tileops > <vendor>
-    > none, so operator support is countable from the file alone. tsingmicro stays
-    hand-written and sparse because it registers the full generated op list rather
-    than a subset -- a `none` entry there would reach the dispatcher and raise on
-    an empty slot instead of boxing to cpu_fallback, so the whole-list shape is
-    not available to it. Such a build is detected via lib/flagos_platform, or for
-    Ascend via /dev/davinci* device nodes. To collapse that table onto a single
-    backend family for A/B measurement, set FLAGOS_FORCE_BACKEND to flaggems,
-    vendor or tileops -- one name, so "two of them at once" is unrepresentable.
-    Every mode is applied in common.cc over the parsed table: an op only moves
-    if the target backend actually implements it, known from the routed value
-    plus its `# <backend>` annotation. Ops with no such implementation are
-    listed on stderr and stay on their configured backend -- the vendor mode is
-    therefore partial by nature, since a vendor implements far fewer ops than
-    FlagGems.
-
-    The two boxing confs (metax, dcu) are generated by the same script and have
-    the same full-coverage shape as the vendor ones; only the fallback key
-    differs, spelled `cuda` because a CUDA-compatible platform can box every op
-    (which is why they have no `none` entries). Each routes the ops its own triton
-    backend cannot run back to that boxing kernel instead of to flaggems:
-    mm/bmm/mean.dim and friends on MetaX (maca libtorch_cuda), slice_backward
-    (hardware VMFault) and silu_backward (missing div_rn lowering) on DCU under
-    DTK's hcu triton. Those per-platform gap sets are measured on hardware, so the
-    generator recovers them from the confs rather than restating them. An explicit
-    FLAGOS_BACKEND_CONFIG always wins (advanced/testing use), and the per-op
-    FLAGOS_OP_<name> overrides in common.cc still apply on top. This must run
-    before the first op dispatch triggers BackendTable() init; setting it at
-    import time (before any flagos tensor op) is well before that.
+    An explicit FLAGOS_BACKEND_CONFIG always wins (advanced/testing use), and
+    the per-op FLAGOS_OP_<name> overrides in common.cc still apply on top. This
+    must run before the first op dispatch triggers BackendTable() init; setting
+    it at import time (before any flagos tensor op) is well before that.
 
     The choice is handed to the C++ reader through
     _C._set_backend_config_path(), not written to os.environ. It used to be an
@@ -173,62 +141,49 @@ def _select_backend_config() -> None:
     _BACKEND_CONFIG_PATH = ""
 
     if _env.value("FLAGOS_BACKEND_CONFIG"):
+        # An override that cannot be read is fatal, not a fallback. The C++
+        # loader leaves its table empty when the file will not open, and an empty
+        # table resolves every op to Dispatcher::GetFn's default
+        # (Backend::kFlagGems) -- so a typo here silently routes the whole
+        # workload down the slowest path behind a single stderr line, and it also
+        # switches off the FlagGems process-level setup that reads this same file
+        # (see _conf_routes_to_flaggems below). Measured on A100: a nonexistent
+        # path sends every dispatch to flagos_python.
+        #
+        # Resolved to an absolute path because the C++ side reads the variable
+        # lazily, at the first op dispatch, which a caller may reach after a
+        # chdir -- and a relative path is resolved against the cwd at that
+        # moment, not at import.
+        #
+        # Recorded through _BACKEND_CONFIG_PATH (which _set_backend_config_path
+        # hands to the C++ reader), not written back to os.environ: an
+        # environment write makes the wheel's own selection indistinguishable
+        # from the user's for the rest of the process -- see backend_config_path().
+        override = _env.value("FLAGOS_BACKEND_CONFIG")
+        resolved = os.path.abspath(override)
+        try:
+            with open(resolved):
+                pass
+        except OSError as err:
+            raise RuntimeError(
+                f"FLAGOS_BACKEND_CONFIG={override!r} cannot be read "
+                f"(resolved to {resolved!r}): {err}. Unset it to let torch_fl "
+                f"select the conf matching this build, or point it at an "
+                f"existing conf file."
+            ) from err
+        _BACKEND_CONFIG_PATH = resolved
         return
 
-    # A vendor build whose kernels are native (no CUDA boxing) records its
-    # platform in lib/flagos_platform. backends_<platform>.conf is generated by
-    # scripts/codegen/gen_vendor_confs.py and already lists every routable op with its
-    # final backend (flaggems_cpp > flaggems > tileops > <vendor> > none), so
-    # there is no FlagGems opt-in to apply here -- the conf is FlagGems-first by
-    # construction. FLAGOS_FORCE_BACKEND narrows it afterwards.
-    marker = os.path.join(os.path.dirname(__file__), "lib", "flagos_platform")
-    if os.path.exists(marker):
-        with open(marker) as f:
-            platform = f.read().strip().lower()
-        platform_conf = os.path.join(
-            os.path.dirname(__file__), "configs", f"backends_{platform}.conf"
-        )
-        if os.path.exists(platform_conf):
-            _BACKEND_CONFIG_PATH = platform_conf
-            return
-
-    conf_dir = os.path.join(os.path.dirname(__file__), "configs")
-
-    # Ascend builds compile the ACL C++ backend (Backend::kAscend), not the CUDA
-    # boxing kernels, so the cuda/flaggems confs (which route ops to `cuda`) can
-    # never apply. Since every wheel ships all backends*.conf files, the conf set
-    # can't distinguish the build; use the runtime hardware signal instead. An
-    # Ascend NPU exposes /dev/davinci* device nodes -- their presence means this
-    # is an Ascend box, where the only usable routing is the ascend conf. (A CUDA
-    # build could not run here anyway, so this never mis-fires on a CUDA host.)
-    ascend_default = os.path.join(conf_dir, "backends_ascend.conf")
-    try:
-        is_ascend_build = os.path.exists(ascend_default) and any(
-            name.startswith("davinci") for name in os.listdir("/dev")
-        )
-    except OSError:
-        is_ascend_build = False
-
-    if is_ascend_build:
-        _BACKEND_CONFIG_PATH = ascend_default
-        return
-
-    # The conf follows from the build itself, not from a runtime mode switch:
-    # the accelerator (plus the lib/flagos_platform marker above) is what the
-    # wheel was built for. MetaX is built boxing-only (setup.py forces
-    # FLAGOS_BUILD_VENDOR=OFF), so it maps straight to backends_metax.conf with no
-    # mode variable to consult. A future native build of a CUDA-compatible
-    # vendor would select its conf from the same record.
-    if _build_accelerator() == "metax":
-        conf_name = "backends_metax.conf"
-    elif _build_accelerator() == "dcu":
-        conf_name = "backends_dcu.conf"
-    elif _build_accelerator() == "kunlunxin":
-        conf_name = "backends_kunlunxin.conf"
-    elif _is_ppu_build():
-        conf_name = "backends_ppu.conf"
-    else:
-        conf_name = "backends_cuda.conf"
+    # The conf follows from the build itself, not from a runtime mode switch: the
+    # recorded accelerator says what the wheel was built for, and the conf is
+    # named after the vendor it resolves to. The record is the answer; the two
+    # wheels that predate their record value still resolve: an older PPU wheel
+    # reports cuda and is recognised by lib_thead/, an older MetaX wheel
+    # reports maca.
+    platform = _platform.platform_for(_build_accelerator())
+    if _is_ppu_build():
+        platform = "ppu"
+    conf_name = f"backends_{_platform.vendor_for(platform) or 'nvidia'}.conf"
     conf_path = os.path.join(os.path.dirname(__file__), "configs", conf_name)
     if os.path.exists(conf_path):
         _BACKEND_CONFIG_PATH = conf_path
@@ -294,7 +249,7 @@ def _relink_vendor_libtorch() -> None:
 
     MetaX is a boxing-only build: accel=="metax" selects its core unconditionally (an
     in-place build reaches the vendor torch through FLAGOS_VENDOR_TORCH_LIB, a
-    self-contained wheel through lib_maca/).  DCU and PPU have no native-kernel
+    self-contained wheel through lib_metax/).  DCU and PPU have no native-kernel
     mode, so bundle-dir presence alone decides.  The CUDA backend is not here:
     the official +cpu wheel's core .so ARE the upstream ones, so only the extra
     CUDA libs are missing and _preload_cuda_assets() below handles those with
@@ -310,23 +265,23 @@ def _relink_vendor_libtorch() -> None:
         ensure_maca_libtorch_links()
         return
 
-    if accel == "dcu":
+    if accel == "hygon":
         # Decoupled by default: preload only DTK's device libraries on top of the
         # official core, leaving torch/lib untouched. FLAGOS_DCU_VENDOR_CORE=1
         # selects the full vendor core through a private facade. See
-        # torch_fl/accelerator/dcu/_dcu_libtorch_link.py.
-        from torch_fl.accelerator.dcu._dcu_libtorch_link import setup_dcu_runtime
+        # torch_fl/accelerator/hygon/_dcu_libtorch_link.py.
+        from torch_fl.accelerator.hygon._dcu_libtorch_link import setup_dcu_runtime
 
         setup_dcu_runtime()
         return
 
     # PPU is its own accelerator now; an older PPU wheel reports "cuda" and is
-    # recognised by its lib_ppu/ bundle instead.
-    if accel in ("cuda", "", "ppu"):
+    # recognised by its lib_thead/ bundle instead.
+    if accel in ("nvidia", "", "thead"):
         from torch_fl.accelerator._vendor_libtorch import bundled_lib_dir
 
-        if bundled_lib_dir("lib_ppu", "libtorch_cuda.so"):
-            from torch_fl.accelerator.ppu._ppu_libtorch_link import (
+        if bundled_lib_dir("lib_thead", "libtorch_cuda.so"):
+            from torch_fl.accelerator.thead._ppu_libtorch_link import (
                 ensure_ppu_libtorch_links,
             )
 
@@ -363,7 +318,7 @@ def _preload_cuda_assets() -> None:
     main_cuda = os.path.join(lib_dir, "libtorch_cuda.so")
     if not os.path.exists(main_cuda):
         # No bundled assets; rely on an out-of-band preload (e.g. LD_PRELOAD via
-        # scripts/vendor/with_cuda_libtorch.sh) if the user set one up.
+        # scripts/vendor/with_nvidia_libtorch.sh) if the user set one up.
         return
 
     def _try(path, mode=ctypes.RTLD_GLOBAL):
@@ -446,7 +401,7 @@ def _disable_vendor_backend_autoload() -> None:
     TORCH_DEVICE_BACKEND_AUTOLOAD=1 restores stock torch_musa behaviour (useful
     for A/B testing against the vendor plugin, with torch_fl not imported).
     """
-    if _build_accelerator() != "musa":
+    if _build_accelerator() != "mthreads":
         return
     _env.set_foreign("TORCH_DEVICE_BACKEND_AUTOLOAD", "0")
 
@@ -456,23 +411,23 @@ def _validate_dcu_decoupled_runtime() -> None:
 
     Only runs for a decoupled DCU build (a DCU wheel without
     FLAGOS_DCU_VENDOR_CORE=1), right after `import torch`; the checks themselves
-    live in accelerator/dcu/_dcu_runtime_check.py. Set
+    live in accelerator/hygon/_dcu_runtime_check.py. Set
     FLAGOS_DCU_SKIP_RUNTIME_CHECK=1 to bypass (e.g. when deliberately testing a
     non-matching wheel pair).
     """
-    if _build_accelerator() != "dcu":
+    if _build_accelerator() != "hygon":
         return
     if _env.flag("FLAGOS_DCU_SKIP_RUNTIME_CHECK"):
         return
 
-    from torch_fl.accelerator.dcu._dcu_libtorch_link import vendor_core_mode
+    from torch_fl.accelerator.hygon._dcu_libtorch_link import vendor_core_mode
 
     if vendor_core_mode():
         return  # legacy mode replaces the core wholesale; nothing to reconcile.
 
-    from torch_fl.accelerator.dcu._dcu_runtime_check import validate_decoupled_runtime
+    from torch_fl.accelerator.hygon._dcu_runtime_check import validate_decoupled_runtime
 
-    validate_decoupled_runtime(os.path.join(os.path.dirname(__file__), "lib_dcu"))
+    validate_decoupled_runtime(os.path.join(os.path.dirname(__file__), "lib_hygon"))
 
 
 def _check_privateuse1_unclaimed() -> None:
@@ -535,7 +490,7 @@ def _install_musa_flaggems_compat() -> None:
     has to actually answer, so the CUDA-shaped device API is carried below
     rather than left to raise ``AttributeError`` inside an unrelated caller.
     """
-    if _build_accelerator() != "musa" or not _conf_routes_to_flaggems():
+    if _build_accelerator() != "mthreads" or not _conf_routes_to_flaggems():
         return
 
     import functools
@@ -844,7 +799,7 @@ def _patch_flaggems_philox():
     deterministic without maintaining a second CUDA-style generator state.
     """
     if (
-        _build_accelerator() not in ("musa", "tsingmicro")
+        _build_accelerator() not in ("mthreads", "tsingmicro")
         or not _conf_routes_to_flaggems()
     ):
         return
@@ -980,7 +935,7 @@ def _patch_flaggems_layer_norm_backward() -> None:
     """
     if not _conf_routes_to_flaggems():
         return
-    if _build_accelerator() not in ("cuda", "", "ppu", "musa", "tsingmicro"):
+    if _build_accelerator() not in ("nvidia", "", "thead", "mthreads", "tsingmicro"):
         return
 
     try:
@@ -1046,7 +1001,7 @@ def _restore_dcu_hip_version() -> None:
     See the DCU branch of _patch_flaggems_codegen_config() for why this matters:
     the bundled libtorch is DTK's HIP build, but torch/version.py comes from the
     stock torch+cpu wheel in front and reports hip=None, which switches triton's
-    hcu backend off. scripts/vendor/bundle_dcu_libtorch.sh copies the vendor torch's own
+    hcu backend off. scripts/vendor/bundle_hygon_libtorch.sh copies the vendor torch's own
     version.py next to the bundled .so as vendor_version.py; read the strings
     back from there. No-op when a real vendor torch is in front.
     """
@@ -1058,7 +1013,9 @@ def _restore_dcu_hip_version() -> None:
     hip_ver = _env.value("FLAGOS_DCU_HIP_VERSION", "")
     rocm_ver = ""
     if not hip_ver:
-        ver_py = os.path.join(os.path.dirname(__file__), "lib_dcu", "vendor_version.py")
+        ver_py = os.path.join(
+            os.path.dirname(__file__), "lib_hygon", "vendor_version.py"
+        )
         try:
             with open(ver_py, encoding="utf-8") as f:
                 for line in f:
@@ -1135,16 +1092,16 @@ def _patch_flaggems_codegen_config():
 
     # --- Apple MPS branch ---
     # The Metal backend ships no FlagGems route at all (the platform table turns
-    # FLAGOS_BUILD_FLAGGEMS off and backends_mps.conf is empty; there is no Metal
+    # FLAGOS_BUILD_FLAGGEMS off and backends_apple.conf is empty; there is no Metal
     # Triton line to build against), so there is no vendor to name and no codegen
     # config to patch. Keyed on the build accelerator because, unlike every other
     # branch below, MPS has no vendor runtime probe that could have failed --
     # reaching the ascend fallback would mislabel the vendor and abort the import.
-    if _build_accelerator() == "mps":
+    if _build_accelerator() == "apple":
         return
 
     # --- Moore Threads MUSA branch ---
-    if _build_accelerator() == "musa":
+    if _build_accelerator() == "mthreads":
         _env.set_foreign("GEMS_VENDOR", "mthreads")
         return
 
@@ -1188,7 +1145,7 @@ def _patch_flaggems_codegen_config():
     # libcuda.so probe can tell the two apart. Must come before both the generic
     # NVIDIA branch (which no-ops here anyway -- no libcuda.so) and the ascend
     # fallback. setdefault so an explicit GEMS_VENDOR still wins.
-    if _build_accelerator() == "dcu" and os.environ.get("GEMS_VENDOR") != "ascend":
+    if _build_accelerator() == "hygon" and os.environ.get("GEMS_VENDOR") != "ascend":
         _env.set_foreign("GEMS_VENDOR", "hygon")
         # torch.version is pure Python (torch/version.py), generated when the
         # wheel is built -- swapping the bundled DTK .so files cannot change it.
@@ -1202,7 +1159,7 @@ def _patch_flaggems_codegen_config():
         # from the bundled libtorch's own version so triton sees a HIP torch,
         # matching what the vendor wheel reported.
         _restore_dcu_hip_version()
-        from torch_fl.accelerator.dcu._dcu_compat import (
+        from torch_fl.accelerator.hygon._dcu_compat import (
             install_dcu_rng_bridge,
             patch_torch_cuda_for_dcu,
         )
@@ -1241,8 +1198,8 @@ def _patch_flaggems_codegen_config():
     # neither is installed, patch_gcu_triton_for_flagos() returns False and we
     # leave GEMS_VENDOR unset so the topsaten kernels and cpu_fallback stay in
     # charge.
-    if _build_accelerator() == "gcu" and os.environ.get("GEMS_VENDOR") != "ascend":
-        from torch_fl.accelerator.gcu._gcu_compat import (
+    if _build_accelerator() == "enflame" and os.environ.get("GEMS_VENDOR") != "ascend":
+        from torch_fl.accelerator.enflame._gcu_compat import (
             install_gcu_rng_generators,
             patch_diffusers_qwenimage_rope,
             patch_gcu_triton_for_flagos,
@@ -1311,7 +1268,7 @@ def _patch_flaggems_codegen_config():
         and _build_accelerator() != "metax"
         and os.environ.get("GEMS_VENDOR") != "ascend"
     ):
-        from torch_fl.accelerator.cuda._cuda_compat import (
+        from torch_fl.accelerator.nvidia._cuda_compat import (
             is_nvidia_cuda_available,
             patch_torch_cuda_for_flagos,
         )
@@ -1623,6 +1580,74 @@ def _real_cuda_is_available() -> bool:
     return bool(_TORCH_CUDA_PROBE())
 
 
+# DIAGNOSTIC hook, temporary: see `_capability_diagnostic`. Read once, so one
+# process prints one stack.
+_CAPABILITY_DIAGNOSED = False
+
+
+def _capability_diagnostic(original):
+    """Wrap `torch.cuda.get_device_capability` so a raise explains itself.
+
+    Enflame GCU is the lane that fails here: `torch.compile` dies in
+    `torch.utils._triton._device_supports_tma` with "Torch not compiled with CUDA
+    enabled", and neither the log nor a simulated `gcu` build on another machine
+    says which binding of the getter was reached. The wrapper answers exactly as
+    the original does; on the first raise it prints the call stack and the state
+    of the probes that can produce this error, then re-raises.
+
+    Remove once the GCU lane is green.
+    """
+
+    @functools.wraps(original)
+    def capability_with_evidence(device=None):
+        global _CAPABILITY_DIAGNOSED
+        try:
+            return original(device)
+        except AssertionError as exc:
+            if not _CAPABILITY_DIAGNOSED:
+                _CAPABILITY_DIAGNOSED = True
+                import sys
+                import traceback
+
+                print("[gcu-diag] get_device_capability raised:", exc, file=sys.stderr)
+                traceback.print_stack(file=sys.stderr)
+                print(
+                    "[gcu-diag] alias=%s gcu_attr=%s lazy_init=%s props=%s "
+                    "is_available=%s torch.module=%s torch.cuda.module=%s "
+                    "torch_fl._C=%s"
+                    % (
+                        _cuda_alias_active,
+                        hasattr(torch, "gcu"),
+                        getattr(torch.cuda._lazy_init, "__name__", "?"),
+                        getattr(torch.cuda.get_device_properties, "__name__", "?"),
+                        torch.cuda.is_available(),
+                        getattr(sys.modules.get("torch"), "__file__", None),
+                        getattr(sys.modules.get("torch.cuda"), "__file__", None),
+                        getattr(sys.modules.get("torch_fl._C"), "__name__", None),
+                    ),
+                    file=sys.stderr,
+                    flush=True,
+                )
+            raise
+
+    capability_with_evidence._flagos_diagnostic = True
+    return capability_with_evidence
+
+
+def _install_capability_diagnostic() -> None:
+    """Install the wrapper once, before anything can call the stock getter.
+
+    Called at the end of `_phase_claim`, which is before `_phase_vendor_compat`
+    and before the first `import flag_gems`; the alias runs later and would be
+    too late if FlagGems were imported during the vendor phase. Independent of
+    the alias's own early returns, so `FLAGOS_ALIAS_CUDA=0` still diagnoses.
+    """
+    if torch.cuda.get_device_capability is _STOCK_DEVICE_CAPABILITY:
+        torch.cuda.get_device_capability = _capability_diagnostic(
+            _STOCK_DEVICE_CAPABILITY
+        )
+
+
 def _alias_cuda_to_flagos():
     """Make ``device="cuda"`` mean the flagos device when there is no real CUDA.
 
@@ -1791,15 +1816,15 @@ def _register_flaggems_operators():
     # compiled when FLAGOS_BUILD_FLAGGEMS=ON and selected per overload by
     # FLAGOS_BACKEND_CONFIG. Calling flag_gems.enable() here would register a
     # competing PrivateUse1 implementation and bypass the shared dispatcher.
-    if _build_accelerator() == "gcu":
-        from torch_fl.accelerator.gcu._gcu_compat import is_gcu_triton_available
+    if _build_accelerator() == "enflame":
+        from torch_fl.accelerator.enflame._gcu_compat import is_gcu_triton_available
 
         if not is_gcu_triton_available():
             return
         try:
             import flag_gems
 
-            from torch_fl.accelerator.gcu._gcu_compat import (
+            from torch_fl.accelerator.enflame._gcu_compat import (
                 bind_vendor_ops_in_generic_modules,
                 patch_flaggems_device_name,
             )
@@ -2332,6 +2357,11 @@ def _phase_preload() -> None:
     _disable_vendor_backend_autoload()
 
 
+# The stock torch.cuda.get_device_capability, captured before anything wraps it;
+# the diagnostic in `_install_capability_diagnostic` keys on this identity.
+_STOCK_DEVICE_CAPABILITY = None
+
+
 def _phase_claim() -> None:
     """Import torch, claim PrivateUse1, load _C and install the device module.
 
@@ -2350,7 +2380,7 @@ def _phase_claim() -> None:
     # dispatch while torch/version.py still reports cuda=None. Restore that build
     # metadata before optional packages inspect it and select a native library.
     if _is_ppu_build():
-        from torch_fl.accelerator.ppu._ppu_libtorch_link import (  # noqa: E402
+        from torch_fl.accelerator.thead._ppu_libtorch_link import (  # noqa: E402
             restore_ppu_cuda_version,
         )
 
@@ -2412,7 +2442,7 @@ def _phase_claim() -> None:
 
     from . import flagos  # noqa: E402
 
-    if _build_accelerator() == "mps":
+    if _build_accelerator() == "apple":
         # Finish the allocator before torch's module teardown clears Storage
         # objects. A DataPtr can then be deleted without the caching allocator
         # reinitialising during static destruction.
@@ -2424,7 +2454,7 @@ def _phase_claim() -> None:
     torch._register_device_module("flagos", flagos)
     torch.utils.generate_methods_for_privateuse1_backend(for_storage=True)
 
-    if _build_accelerator() == "gcu":
+    if _build_accelerator() == "enflame":
         _install_gcu_device_module_probes()
         # `has_triton` has to answer for the FlagTree enflame backend before
         # inductor's `create_backend` asks (it raises `TritonMissing` otherwise,
@@ -2435,6 +2465,14 @@ def _phase_claim() -> None:
         from torch_fl.compile.device_interface import _prime_has_triton
 
         _prime_has_triton()
+
+    # DIAGNOSTIC, temporary: see `_capability_diagnostic`. Installed here rather
+    # than in the alias because `_phase_vendor_compat` and the first
+    # `import flag_gems` can both reach `torch.cuda.get_device_capability`
+    # before `_phase_ecosystem` runs the alias.
+    global _STOCK_DEVICE_CAPABILITY
+    _STOCK_DEVICE_CAPABILITY = torch.cuda.get_device_capability
+    _install_capability_diagnostic()
 
 
 def _phase_vendor_compat() -> None:
@@ -2490,7 +2528,7 @@ def _phase_ecosystem() -> None:
     # bundled, so the init works and is what its FlagGems/Triton path relies on.
     if (
         not _env.flag("FLAGOS_DISABLE_FLAGGEMS_PY")
-        and _build_accelerator() in ("cuda", "", "ppu")
+        and _build_accelerator() in ("nvidia", "", "thead")
         and torch.cuda.is_available()
     ):
         torch.cuda.init()

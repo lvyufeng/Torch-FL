@@ -5,7 +5,7 @@ kernel only when the platform code generator cannot express the required runtime
 behaviour, and requires the concrete limitation to be documented and approved
 before the implementation is added. This file is that document, and the approval
 was obtained before any code was written. The kernel is
-`csrc/aten/backends/gcu/scaled_dot_product_attention.cc`; the route record —
+`csrc/aten/backends/enflame/scaled_dot_product_attention.cc`; the route record —
 counts, artifact hashes, generator idempotency and the S60 measurement — is in
 `docs/reference/operator-support.md` under the 2026-09-20 GCU entry.
 
@@ -196,7 +196,7 @@ relevant categories:
   body `at::Tensor {kernel}(...)` plus
   `REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kGcu, {kernel})`.
 * **`HANDWRITTEN_OPS`** — emits only `m.impl("<op>", Wrapper...)` into
-  `gcu_register.inc` and a `= gcu` route into `backends_gcu.conf`, and expects a
+  `gcu_register.inc` and a `= gcu` route into `backends_enflame.conf`, and expects a
   hand-written translation unit to carry the body (this is how `rng.cc` and
   `native_dropout` are done).
 * **`METADATA_OPS`** — same, for view ops whose bodies live in
@@ -263,14 +263,14 @@ get it wrong.
 
 ## 4. What was built
 
-**One new translation unit**, `csrc/aten/backends/gcu/scaled_dot_product_attention.cc`,
+**One new translation unit**, `csrc/aten/backends/enflame/scaled_dot_product_attention.cc`,
 picked up automatically by the CMake glob (`csrc/CMakeLists.txt:138` excludes the
 whole `backends/<vendor>/` tree only when the build is not for that vendor), plus
 **one line** adding `_scaled_dot_product_efficient_attention` to `HANDWRITTEN_OPS`
 in `codegen_gcu.py`, plus regenerated artifacts.
 
 The file mirrors `csrc/aten/backends/ascend/scaled_dot_product_attention.cc` and
-`csrc/aten/backends/gcu/rng.cc`:
+`csrc/aten/backends/enflame/rng.cc`:
 
 1. A namespace-scope `REGISTER_PRIVATEUSE1_DISPATCH(_fused_sdp_choice_stub, ...)`
    (the macro expands a static registrar, so it cannot live in an anonymous
@@ -549,7 +549,7 @@ change to inference. The diffusion loop runs under `torch.no_grad()`.
   `FLAGGEMS_PENDING_NATIVE_OPS`, which `build_all` subtracts from `py_here` for
   `gcu`, so it will not be captured by the FlagGems route and the generated conf
   line becomes `_scaled_dot_product_efficient_attention = gcu` (today `none` at
-  `backends_gcu.conf:486`). The backward line (`flaggems`, `:487`) is unchanged,
+  `backends_enflame.conf:486`). The backward line (`flaggems`, `:487`) is unchanged,
   and `gcu_flaggems_register.inc` must not gain a forward entry or the vendor
   kernel would stop being reached.
 * `docs/reference/operator-support.md` must be updated for GCU in the same

@@ -14,7 +14,7 @@
 
 """A CPU-resident operand must not reach topsaten as device memory (issue #526).
 
-`csrc/aten/backends/gcu/generated/gcu_kernels.cc` wraps operand `data_ptr()`s
+`csrc/aten/backends/enflame/generated/gcu_kernels.cc` wraps operand `data_ptr()`s
 into `gcu::TopsatenTensorWrapper`s. ATen's `_convolution` Overrideable arm is the
 only conv backend that does not call `check_input_same_type_as_parameters`, so a
 CPU `weight`/`bias` reaches `ConvolutionOverrideableKernelGcu` unmoved; the
@@ -43,7 +43,7 @@ DEVICE = torch.device("flagos:0")
 def _gcu_only():
     from torch_fl._build_config import ACCELERATOR
 
-    if ACCELERATOR != "gcu":
+    if ACCELERATOR != "enflame":
         pytest.skip("GCU build required")
 
 

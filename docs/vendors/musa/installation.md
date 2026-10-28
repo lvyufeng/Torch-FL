@@ -36,7 +36,7 @@ FLAGOS_ACCELERATOR=musa pip install --no-build-isolation -v -e .
 Build flags:
 - `FLAGOS_ACCELERATOR=musa`: selects the MUSA build path and enables `FLAGOS_BUILD_VENDOR=ON`
 - `FLAGOS_BUILD_VENDOR=ON`: compiles generated `mudnn` operator kernels (automatic when `FLAGOS_ACCELERATOR=musa`)
-- `FLAGOS_BUILD_FLAGGEMS=ON`: compiles the optional Python dispatcher callers into the same wheel; runtime routing comes from `backends_musa.conf`
+- `FLAGOS_BUILD_FLAGGEMS=ON`: compiles the optional Python dispatcher callers into the same wheel; runtime routing comes from `backends_mthreads.conf`
 - `FLAGOS_BUILD_BOXING=OFF`: forced (the MUSA toolkit exports no CUDA symbols)
 - `FLAGOS_BUILD_FLAGGEMS_CPP=OFF`: automatically disabled because the FlagGems C++ runtime is not built for MUSA
 - `--no-build-isolation`: **required** (without it, pip resolves its own torch into a build overlay, and the extension links against that instead of your installed torch, causing `import torch_fl` to fail with `undefined symbol: c10::ValueError`)
@@ -79,10 +79,10 @@ print(f"abs matches CPU: {torch.allclose(y.cpu(), x.cpu().abs())}")
 
 ### Runtime backend selection
 
-`torch_fl` installs a `lib/flagos_platform` marker so the runtime picks `backends_musa.conf` automatically. This native-only mode requires no environment variable override.
+`torch_fl` installs a `lib/flagos_platform` marker so the runtime picks `backends_mthreads.conf` automatically. This native-only mode requires no environment variable override.
 
 There is no `FLAGOS_USE_FLAGGEMS` opt-in and no separate `*_flagos_py.conf`
-narrow hybrid set. `backends_musa.conf` is generated FlagGems-first: of the 515
+narrow hybrid set. `backends_mthreads.conf` is generated FlagGems-first: of the 515
 ops MUSA registers on PrivateUse1, 468 resolve to `flaggems` and 47 to `musa`,
 and the remaining ops are written `none` because MUSA does not register them, so
 they reach `cpu_fallback`. Where a mudnn kernel exists behind an op FlagGems
@@ -115,7 +115,7 @@ Run the MUSA dispatch suite:
 pytest tests/integration/ops/test_musa_dispatch.py -v
 ```
 
-This test file checks that ops route to the `musa` backend, exercises per-op environment overrides, and validates results against CPU references. It replaces the generic per-op tests in `tests/integration/ops/`, which assert `-> cuda` routing that MUSA builds cannot produce (no CUDA boxing kernels are compiled).
+This test file checks that ops route to the `musa` backend, exercises per-op environment overrides, and validates results against CPU references. It replaces the generic per-op tests in `tests/integration/ops/`, which assert `-> boxing` routing that MUSA builds cannot produce (no CUDA boxing kernels are compiled).
 
 Run the autocast and GradScaler suite:
 
@@ -131,7 +131,7 @@ Run common operator smoke tests:
 pytest tests/integration/ops/test_common_ops.py -v -s --tb=short
 ```
 
-**Note**: MUSA has no CI configuration file (`.github/configs/musa.yml` does not exist), so all validation is manual.
+**Note**: MUSA has no CI configuration file (`.github/configs/mthreads.yml` does not exist), so all validation is manual.
 
 ## Operator Coverage
 
@@ -148,7 +148,7 @@ Category-driven codegen via `scripts/codegen/codegen_mudnn.py` covers:
 
 ### Handwritten operators (2 ops)
 
-**Convolution** (`csrc/aten/backends/musa/mudnn_conv.cc`):
+**Convolution** (`csrc/aten/backends/mthreads/mudnn_conv.cc`):
 - `convolution_overrideable` cannot be left unregistered (ATen's default raises rather than being boxable to CPU)
 - `mudnn`'s `Convolution` covers 2 spatial dims only:
   - conv1d runs as 2D conv with unit `H` dim (exact against CPU)
@@ -156,7 +156,7 @@ Category-driven codegen via `scripts/codegen/codegen_mudnn.py` covers:
 - Bias is a separate broadcast `Binary::ADD`; `RunFusion` accepts bias only for non-grouped 2D
 - Algorithm is chosen by trial and cached per shape (since `GetRecommendForwardAlgorithm` can name one that `Run` then rejects)
 
-**Copy and cast** (`csrc/aten/backends/musa/mudnn_copy.cc`):
+**Copy and cast** (`csrc/aten/backends/mthreads/mudnn_copy.cc`):
 - Strided copies and dtype casts use `mudnn`'s `Unary::IDENTITY` / `Unary::CAST`
 - Handles both in a single device pass
 - Without this, `copy_`/`clone`/`contiguous` would reach the CUDA `DispatchStub` and fail
@@ -243,7 +243,7 @@ A fully broadcast input is materialized before a multi-dim reduction to avoid th
 
 ### Manual S5000 validation
 
-MUSA has no CI runner (no `.github/configs/musa.yml` config exists), so all tests are manual. The platform status is **Experimental** (see [`docs/reference/compatibility.md`](../../reference/compatibility.md) line 31).
+MUSA has no CI runner (no `.github/configs/mthreads.yml` config exists), so all tests are manual. The platform status is **Experimental** (see [`docs/reference/compatibility.md`](../../reference/compatibility.md) line 31).
 
 The native RNG and hybrid FlagGems implementation were measured on 2026-08-17 on an eight-device Moore Threads MTT S5000 host. Device 0 reported capability 3.1, 60 multiprocessors, and 85,813,358,592 bytes of memory. The environment used CPU PyTorch 2.10.0, the installed `/usr/local/musa` toolkit (`mudnn` v3300), FlagGems 5.0.2, and the vendor `flagtree-0.5.0+mthreads3.1` wheel (Triton 3.1.0, backend `mthreads`). Results:
 
@@ -365,7 +365,7 @@ The full procedure, including the environment variables the MUSA CI job sets, is
 in [flaggems-setup.md](flaggems-setup.md). Because the MUSA wheel registers the
 whole FlagGems Python operator set on PrivateUse1, no dispatcher subset has to be
 selected at build time and there is no `FLAGOS_USE_FLAGGEMS` opt-in to set: the
-generated `backends_musa.conf` already decides the routing, and native
+generated `backends_mthreads.conf` already decides the routing, and native
 mudnn/muRAND plus CPU fallback remain usable for the ops it sends to `musa` or
 `none`.
 

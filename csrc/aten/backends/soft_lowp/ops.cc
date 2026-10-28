@@ -172,6 +172,33 @@ void CheckDevice(const at::Tensor& tensor, const char* name) {
       tensor.device());
 }
 
+// Whether the conf's FlagGems C++ route for mm/bmm resolves to this very
+// software wrapper -- a FLAGOS_SOFT_LOWP build with no FlagGems C++ kernels of
+// its own, where dispatch.cc registered these wrappers on Backend::kFlagGemsCpp.
+// The ordinary-dtype hand-back must then not go back through the dispatcher:
+// it would resolve to these same functions and recurse until the stack runs
+// out (MetaX C550, torch.bmm float32: CI run 40242938356). Such a build has no
+// FlagGems C++ kernels to hand to either, so the plain at::mm/at::bmm on the
+// operands is what the hand-back was for on a build that does.
+bool CppGemmRouteIsThisKernel();
+
+// Whether both operands are ordinary dtypes -- no FP8/FP4 on either side. Such
+// a pair is not this path's to compute: it leaves the way it came, on the route
+// the conf names.
+//
+// The wrapper cannot make that call itself. The generated gates live in a shared
+// .inc that runs with no idea whether the build compiles the software path at
+// all, so they read `IsLowPrecision(dtype)` and every build that compiles this
+// path takes the branch. Once here, a pair that stayed would be computed by
+// `at::mm`/`at::bmm` on PrivateUse1 tensors, which on MetaX lands in FlagGems'
+// vendored bmm and, for the shapes it cannot compile, back on this same
+// function: the two ping-pong until the stack runs out (C550 host, float32
+// (2, 4, 4); CI run 40202397139). Vendors are not expected to take the
+// low-precision types, but their ordinary GEMMs are their own business.
+bool IsOrdinaryMatrixPair(const at::Tensor& self, const at::Tensor& mat2) {
+  return !HasLowpInput(self) && !HasLowpInput(mat2);
+}
+
 void CheckMatrixInputs(const at::Tensor& self, const at::Tensor& mat2) {
   TORCH_CHECK(HasLowpInput(self) || HasLowpInput(mat2),
               "soft-lowp matrix kernel requires a low-precision input");
@@ -224,10 +251,48 @@ c10::ScalarType DefaultOutputDtype(const at::Tensor& self, c10::ScalarType reque
 
 namespace {
 
+// Compute a pair the software path does not own (no FP8/FP4 on either side)
+// without routing it back through the conf, for CppGemmRouteIsThisKernel
+// builds.
+//
+// Handing the pair back to the conf (DispatchConfigured) is right when the
+// conf's `flaggems_cpp` route is a FlagGems C++ kernel, but on such a build it
+// is this file's own wrapper, so the hand-back recursed until the stack ran out:
+// SIGSEGV in torch.bmm on float32 (4, 64, 128) x (4, 128, 32), MetaX C550, CI
+// run 40242938356.
+at::Tensor OrdinaryMm(const at::Tensor& self, const at::Tensor& mat2) {
+  auto lhs = DecodeIfNeeded(self, false);
+  auto rhs = DecodeIfNeeded(mat2, true);
+  return at::mm(lhs, rhs);
+}
+
+at::Tensor OrdinaryBmm(const at::Tensor& self, const at::Tensor& mat2) {
+  auto lhs = DecodeBatchIfNeeded(self, false);
+  auto rhs = DecodeBatchIfNeeded(mat2, true);
+  return at::bmm(lhs, rhs);
+}
+
+bool CppGemmRouteIsThisKernel() {
+  // Compared through the dispatcher, not by name: the same function reached as
+  // RegisteredImpl<T> or as a plain address must compare equal. The fallback
+  // dispatchers answer with nullptr until dispatch.cc claims the slot, so
+  // "equal" means that file registered these very wrappers.
+  return flagos::mm_dispatcher.KernelFor(Backend::kFlagGemsCpp) ==
+      mm_fallback_dispatcher.KernelFor(Backend::kFlagGemsCpp);
+}
+
+bool CppGemmRouteIsThisKernel(BmmFn bmm_route) {
+  return bmm_route == bmm_fallback_dispatcher.KernelFor(Backend::kFlagGemsCpp);
+}
+
 at::Tensor MmImpl(
     const at::Tensor& self,
     const at::Tensor& mat2,
     c10::ScalarType out_dtype) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    if (CppGemmRouteIsThisKernel()) return OrdinaryMm(self, mat2);
+    return mm_dispatcher.DispatchConfigured(self, mat2);
+  }
   CheckMatrixInputs(self, mat2);
   auto lhs = DecodeIfNeeded(self, false);
   auto rhs = DecodeIfNeeded(mat2, true);
@@ -240,6 +305,11 @@ at::Tensor BmmImpl(
     const at::Tensor& self,
     const at::Tensor& mat2,
     c10::ScalarType out_dtype) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    const auto bmm_route = bmm_dispatcher.KernelFor(Backend::kFlagGemsCpp);
+    if (CppGemmRouteIsThisKernel(bmm_route)) return OrdinaryBmm(self, mat2);
+    return bmm_route(self, mat2);
+  }
   CheckMatrixInputs(self, mat2);
   auto lhs = DecodeBatchIfNeeded(self, false);
   auto rhs = DecodeBatchIfNeeded(mat2, true);
@@ -261,7 +331,7 @@ at::Tensor AddmmImpl(
   // low-precision-only validation below.
   if (!HasLowpInput(mat1) && !HasLowpInput(mat2)) {
     return addmm_dispatcher.DispatchBackend(
-        Backend::kCuda, self, mat1, mat2, beta, alpha);
+        Backend::kBoxing, self, mat1, mat2, beta, alpha);
   }
   CheckMatrixInputs(mat1, mat2);
   auto bias = self;
@@ -276,7 +346,7 @@ at::Tensor AddmmImpl(
   // configured backend dispatcher can execute the complete matrix operation
   // without recursively re-entering this software path.
   auto result = addmm_dispatcher.DispatchBackend(
-      Backend::kCuda, bias, lhs, rhs, beta, alpha);
+      Backend::kBoxing, bias, lhs, rhs, beta, alpha);
   const auto output_dtype = DefaultOutputDtype(mat1, out_dtype);
   return output_dtype == result.scalar_type() ? result : result.to(output_dtype);
 }
@@ -291,6 +361,9 @@ at::Tensor MmDtype(
     const at::Tensor& self,
     const at::Tensor& mat2,
     c10::ScalarType out_dtype) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    return mm_dtype_dispatcher.DispatchConfigured(self, mat2, out_dtype);
+  }
   return MmImpl(self, mat2, out_dtype);
 }
 
@@ -299,6 +372,10 @@ at::Tensor& MmDtypeOut(
     const at::Tensor& mat2,
     c10::ScalarType out_dtype,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    return mm_dtype_out_dispatcher.DispatchConfigured(
+        self, mat2, out_dtype, out);
+  }
   auto result = MmImpl(self, mat2, out_dtype);
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp mm.dtype_out shape mismatch");
   out.copy_(result);
@@ -309,6 +386,9 @@ at::Tensor& MmOut(
     const at::Tensor& self,
     const at::Tensor& mat2,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    return mm_out_dispatcher.DispatchConfigured(self, mat2, out);
+  }
   auto result = MmImpl(self, mat2, out.scalar_type());
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp mm.out shape mismatch");
   out.copy_(result);
@@ -331,6 +411,10 @@ at::Tensor& BmmDtypeOut(
     const at::Tensor& mat2,
     c10::ScalarType out_dtype,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    return bmm_dtype_out_dispatcher.DispatchConfigured(
+        self, mat2, out_dtype, out);
+  }
   auto result = BmmImpl(self, mat2, out_dtype);
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp bmm.dtype_out shape mismatch");
   out.copy_(result);
@@ -341,6 +425,9 @@ at::Tensor& BmmOut(
     const at::Tensor& self,
     const at::Tensor& mat2,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(self, mat2)) {
+    return bmm_out_dispatcher.DispatchConfigured(self, mat2, out);
+  }
   auto result = BmmImpl(self, mat2, out.scalar_type());
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp bmm.out shape mismatch");
   out.copy_(result);
@@ -374,6 +461,10 @@ at::Tensor& AddmmDtypeOut(
     const at::Scalar& beta,
     const at::Scalar& alpha,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(mat1, mat2)) {
+    return addmm_dtype_out_dispatcher.DispatchConfigured(
+        self, mat1, mat2, out_dtype, beta, alpha, out);
+  }
   auto result = AddmmImpl(self, mat1, mat2, beta, alpha, out_dtype);
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp addmm.dtype_out shape mismatch");
   out.copy_(result);
@@ -387,6 +478,10 @@ at::Tensor& AddmmOut(
     const at::Scalar& beta,
     const at::Scalar& alpha,
     at::Tensor& out) {
+  if (IsOrdinaryMatrixPair(mat1, mat2)) {
+    return addmm_out_dispatcher.DispatchConfigured(
+        self, mat1, mat2, beta, alpha, out);
+  }
   auto result = AddmmImpl(self, mat1, mat2, beta, alpha, out.scalar_type());
   TORCH_CHECK(out.sizes() == result.sizes(), "soft-lowp addmm.out shape mismatch");
   out.copy_(result);
@@ -399,6 +494,10 @@ at::Tensor& AddmmInplace(
     const at::Tensor& mat2,
     const at::Scalar& beta,
     const at::Scalar& alpha) {
+  if (IsOrdinaryMatrixPair(mat1, mat2)) {
+    return addmm_inplace_dispatcher.DispatchConfigured(
+        self, mat1, mat2, beta, alpha);
+  }
   auto result = AddmmImpl(self, mat1, mat2, beta, alpha, self.scalar_type());
   self.copy_(result);
   return self;

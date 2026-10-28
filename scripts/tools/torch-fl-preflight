@@ -27,6 +27,64 @@ MANIFEST_PATH = "torch_fl/compatibility.json"
 SCHEMA_VERSION = 1
 BUILD_DISTRIBUTIONS = ("torch", "flagtree", "flag_gems", "flagcx")
 UNKNOWN_VERSION_MARKERS = {"unknown", "latest", "none", "n/a"}
+#: The repository's platform table, next to this script (scripts/tools -> root).
+PLATFORM_TABLE = Path(__file__).resolve().parents[2] / "cmake" / "flagos_platforms.json"
+
+
+def platform_vendor(name):
+    """The vendor sharing ``name``'s platform row, or ``None``.
+
+    ``--platform`` is given whatever the caller calls the build: a table id
+    (``mps``) or the vendor name the table advertises for that row (``apple``),
+    which is what a CI lane exports. A wheel records the id, so comparing the
+    strings alone rejects the vendor spelling of the platform it was built for.
+
+    The table is read only when the repository is at hand. A preflight installed
+    beside a wheel has no table, and then the comparison stays exact -- failing
+    closed rather than guessing that two names mean the same thing.
+    """
+    try:
+        table = json.loads(PLATFORM_TABLE.read_text(encoding="utf-8"))
+        accelerators = table["accelerators"]
+    except (OSError, ValueError, KeyError):
+        return None
+    row = accelerators.get(name)
+    if isinstance(row, dict) and isinstance(row.get("vendor"), str):
+        return row["vendor"]
+    for key, entry in accelerators.items():
+        if isinstance(entry, dict) and entry.get("vendor") == name:
+            return key
+    return None
+
+
+def _names_segment(name, segment):
+    """Whether ``--platform name`` names a wheel file's local segment.
+
+    The segment is the SDK where the platform has one (`cuda13.3` for cuda, a
+    prefix of it) and the table id where it has none (`mps`). ``name`` may be
+    any spelling of the platform, so the segment is compared with it directly
+    and, when the table pairs a name, with both halves: `apple` names the
+    `mps` segment, and `mps` names a `cuda13.3` one no more than `nvidia` does.
+    """
+    if not segment:
+        return False
+    if segment.startswith(name):
+        return True
+    paired = set()
+    for half in (name, platform_vendor(name) or ""):
+        if half:
+            paired.add(half)
+            paired.add(platform_vendor(half) or half)
+    return any(segment.startswith(half) for half in paired if half)
+
+
+def _same_platform(requested, recorded):
+    if requested == recorded:
+        return True
+    vendor = platform_vendor(requested)
+    if vendor == recorded:
+        return True
+    return platform_vendor(recorded) == requested
 
 
 def installed_version(name):
@@ -208,7 +266,7 @@ def check_environment(
     """Return actionable errors and warnings without loading a native library."""
     errors = []
     warnings = []
-    if platform and platform != manifest["platform"]:
+    if platform and not _same_platform(platform, manifest["platform"]):
         errors.append(f"Wheel platform is {manifest['platform']}; requested {platform}")
     recorded_sdk = manifest["build"]["sdk_version"]
     if (require_sdk or release) and not recorded_sdk:
@@ -308,7 +366,15 @@ def main(argv=None):
     source.add_argument(
         "--installed", action="store_true", help="inspect installed torch_fl"
     )
-    parser.add_argument("--platform", help="expected accelerator")
+    parser.add_argument(
+        "--platform",
+        help="expected accelerator: the table id (mps) or its vendor (apple)",
+    )
+    parser.add_argument(
+        "--wheel-name",
+        action="store_true",
+        help="accept --platform naming the wheel file (torch_fl-2.10.0+mps-...whl)",
+    )
     parser.add_argument("--sdk-version", help="SDK version to compare with the build")
     parser.add_argument(
         "--require-sdk", action="store_true", help="reject an unknown SDK"
@@ -339,6 +405,20 @@ def main(argv=None):
             if args.wheel
             else [load_installed()]
         )
+        if args.wheel_name:
+            if not args.wheel or not args.platform:
+                parser.error("--wheel-name needs --wheel and --platform")
+            # The segment names the wheel's build variant: its SDK (cuda13.3
+            # for a cuda wheel) or, where there is no SDK, the platform id
+            # (mps). A caller may name either spelling, so the request is
+            # matched against the segment as given and paired through the table.
+            segment = args.wheel[0].name.split("-")[1].partition("+")[2]
+            if not _names_segment(args.platform, segment):
+                parser.exit(
+                    2,
+                    f"torch-fl-preflight: {args.wheel[0].name} is not a "
+                    f"{args.platform} wheel\n",
+                )
         errors = []
         warnings = []
         for manifest in manifests:

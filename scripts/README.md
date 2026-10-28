@@ -5,7 +5,8 @@
 
 Development tooling: operator code generation, vendor build helpers, the
 Transformers triage pipeline, and standalone checks. These are host-side tools;
-`tools/torch-fl-preflight` is also installed as a wheel script.
+`tools/torch-fl-preflight` runs on the host and inspects wheel files; it is not
+installed as a console script.
 
 ## Layout
 
@@ -22,16 +23,16 @@ Run every script from the repository root; the examples below assume that.
 
 | Script | What it generates | Run |
 |---|---|---|
-| `codegen_ops.py` | `csrc/aten/generated/{ops.h,ops.cc,cuda_kernels.cc,flaggems_python_kernels.cc,register.inc}` for the CUDA/boxing path. Reads `torch_fl/configs/backends_cuda.conf` and torchgen. | `python scripts/codegen/codegen_ops.py` |
+| `codegen_ops.py` | `csrc/aten/generated/{ops.h,ops.cc,cuda_kernels.cc,flaggems_python_kernels.cc,register.inc}` for the CUDA/boxing path. Reads `torch_fl/configs/backends_nvidia.conf` and torchgen. | `python scripts/codegen/codegen_ops.py` |
 | `codegen_ascend.py` | Ascend aclnn backend sources under `csrc/aten/backends/ascend/`, and appends the covered ops to `backends_ascend.conf`. | `python scripts/codegen/codegen_ascend.py [--category NAME] [--no-conf]` |
 | `codegen_gcu.py` | Enflame GCU (topsaten) backend sources, and the matching conf append. | `python scripts/codegen/codegen_gcu.py [--category NAME] [--no-conf]` |
 | `codegen_mudnn.py` | Moore Threads MUSA (mudnn) backend sources, and the matching conf append. | `python scripts/codegen/codegen_mudnn.py [--category NAME] [--no-conf]` |
 | `codegen_kunlunxin.py` | The Kunlunxin XPU (xdnn_pytorch) native backend: `csrc/aten/backends/kunlunxin/generated/{kunlunxin_kernels.cc,kunlunxin_register.inc}`. Emits only the ten runtime-conformance ops; `torch_fl/configs/backends_kunlunxin.conf` is derived from the emitted register file by `gen_vendor_confs.py`. | `python scripts/codegen/codegen_kunlunxin.py [--check]` |
 | `codegen_iluvatar.py` | The Iluvatar BI-V150 (corex ixdnn/ixblas) native backend: `csrc/aten/backends/iluvatar/generated/{iluvatar_kernels.cc,iluvatar_register.inc}`. Emits the first cohort (conv/public-conv, batch-norm family, mm/bmm/addmm); skips the ops `iluvatar_flaggems_register.inc` already claims so the two `.inc` files stay disjoint. `backends_iluvatar.conf` is derived by `gen_vendor_confs.py`. | `python scripts/codegen/codegen_iluvatar.py [--check]` |
-| `codegen_mps.py` | The Apple Silicon (Metal / MPSGraph) native backend: `csrc/aten/backends/mps/generated/{mps_kernels.mm,mps_register.inc}`, Objective-C++. Grows one category at a time (`unary`, then `binary`, `binary_scalar` and `reduce` -- nine ops so far); `torch_fl/configs/backends_mps.conf` is derived from the emitted register file by `gen_vendor_confs.py`. | `python scripts/codegen/codegen_mps.py [--check]` |
+| `codegen_mps.py` | The Apple Silicon (Metal / MPSGraph) native backend: `csrc/aten/backends/apple/generated/{mps_kernels.mm,mps_register.inc}`, Objective-C++. Grows one category at a time (`unary`, then `binary`, `binary_scalar` and `reduce` -- nine ops so far); `torch_fl/configs/backends_apple.conf` is derived from the emitted register file by `gen_vendor_confs.py`. | `python scripts/codegen/codegen_mps.py [--check]` |
 | `codegen_musa_flaggems.py` | The MUSA FlagGems registration list (`.inc`). | `python scripts/codegen/codegen_musa_flaggems.py [--check]` |
 | `codegen_gcu_flaggems.py` | The GCU FlagGems registration list (`.inc`). | `python scripts/codegen/codegen_gcu_flaggems.py [--check]` |
-| `codegen_boxing_flaggems_register.py` | `csrc/aten/generated/register_flaggems_<platform>.inc` for the CUDA-ABI platforms (cuda, metax, dcu, ppu, tsingmicro): the `m.impl()` lines for the ops each platform's conf routes to a FlagGems backend. `register.cc` compiles these instead of `generated/register.inc` on a FlagGems-primary (boxing-off) build. | `python scripts/codegen/codegen_boxing_flaggems_register.py [--check]` |
+| `codegen_boxing_flaggems_register.py` | `csrc/aten/generated/register_boxing_<platform>.inc` and `register_flaggems_<platform>.inc` for the CUDA-ABI platforms (cuda, metax, dcu, ppu, tsingmicro): the `m.impl()` lines for the ops each platform's conf routes somewhere other than `none` (boxing build), and for the ops it routes to a FlagGems backend (FlagGems-primary build). `register.cc` compiles one or the other instead of `generated/register.inc`; it never claims an op whose route is `none`. | `python scripts/codegen/codegen_boxing_flaggems_register.py [--check]` |
 | `codegen_autograd.py` | `csrc/aten/generated/variable_type.cc` — the `AutogradPrivateUse1` layer for ops a backend re-owns with a fused kernel. | `python scripts/codegen/codegen_autograd.py` |
 | `codegen_tileops.py` | `csrc/aten/generated/tileops_python_kernels.cc`, `torch_fl/tileops/generated/` (routes, shims), `tests/integration/ops/test_tileops_generated.py`, and the `TILEOPS_OPS` block in `backend_coverage.py`. | `python scripts/codegen/codegen_tileops.py [--check]` |
 | `gen_vendor_confs.py` | `torch_fl/configs/backends_<vendor>.conf`, one full-coverage conf per platform. | `python scripts/codegen/gen_vendor_confs.py [--check\|--stats]` |
@@ -47,13 +48,13 @@ through writing a `codegen/codegen_<vendor>.py`.
 | Script | Purpose |
 |---|---|
 | `bundle_common.sh` | Shared helpers for self-contained wheel bundling. Sourced by the three `bundle_*_libtorch.sh` scripts, not run directly. |
-| `bundle_dcu_libtorch.sh` | Copy DTK's libtorch device `.so` into `torch_fl/lib_dcu/`. |
-| `bundle_maca_libtorch.sh` | Copy the MetaX-forked libtorch C++ `.so` into `torch_fl/lib_maca/`. |
-| `bundle_ppu_libtorch.sh` | Copy the locally built PPU libtorch C++ `.so` into `torch_fl/lib_ppu/`. |
-| `check_dcu_core_abi.py` | Assert that the DTK device libraries need no unaccounted vendor-core symbols. Run from `bundle_dcu_libtorch.sh` and from `setup.py`. |
+| `bundle_hygon_libtorch.sh` | Copy DTK's libtorch device `.so` into `torch_fl/lib_hygon/`. |
+| `bundle_metax_libtorch.sh` | Copy the MetaX-forked libtorch C++ `.so` into `torch_fl/lib_metax/`. |
+| `bundle_thead_libtorch.sh` | Copy the locally built PPU libtorch C++ `.so` into `torch_fl/lib_thead/`. |
+| `check_hygon_core_abi.py` | Assert that the DTK device libraries need no unaccounted vendor-core symbols. Run from `bundle_hygon_libtorch.sh` and from `setup.py`. |
 | `patch_triton_ascend.py` | Legacy: patch triton-ascend 3.2.x so it works without a torch_npu dependency. Not called by the Ascend CI route, which runs FlagGems on FlagTree with the in-repo `flagtree_ascend_policy.py` instead. |
 | `setup_bpu_hbdk4.sh` | Install the hbdk4 BPU graph compiler (x86_64-only wheels) plus box64 where on-board compilation is needed. |
-| `with_cuda_libtorch.sh` | Run any command with a version-matched `libtorch_cuda.so` preloaded via `LD_PRELOAD`. Superseded by the single-wheel runtime preload for normal use; still the way to run a CUDA test against an external libtorch. |
+| `with_nvidia_libtorch.sh` | Run any command with a version-matched `libtorch_cuda.so` preloaded via `LD_PRELOAD`. Superseded by the single-wheel runtime preload for normal use; still the way to run a CUDA test against an external libtorch. |
 
 ## transformers/
 
@@ -82,7 +83,7 @@ in this directory.
 
 | Script | Purpose |
 |---|---|
-| `torch-fl-preflight` | Validate an artifact's compatibility manifest before importing `torch_fl`. `python scripts/tools/torch-fl-preflight --wheel dist/*.whl --check-build-env`; installed as `torch-fl-preflight`. |
+| `torch-fl-preflight` | Validate an artifact's compatibility manifest before importing `torch_fl`. `python scripts/tools/torch-fl-preflight --wheel dist/*.whl --check-build-env`; inspects a wheel file, not an installed package. |
 | `validate_ai_pr.py` | Validate an AI-authored PR body against the repository's requirements. `python scripts/tools/validate_ai_pr.py --pr-body pr_description.md` |
 | `verify_flaggems_ascend.py` | Per-op check of whether the FlagGems Triton path is numerically correct on Ascend. Slow (Triton JIT dominates, hours for a full sweep), supports `--shard i/n` and `--ops`. |
 | `record_musa_flaggems_failures.py` | Record MUSA FlagGems ops that fail CI so they move into `NATIVE_TRITON_GAPS`, then regenerate the confs. |
@@ -107,13 +108,13 @@ require an empty diff before opening a PR that touches them.
 | `csrc/aten/generated/name_map.json` | `extract_name_map.py` | **manual** |
 | `csrc/aten/generated/register_flaggems_{cuda,metax,dcu,ppu,tsingmicro}.inc` | `codegen_boxing_flaggems_register.py` | `codegen_boxing_flaggems_register.py --check` — **CI** |
 | `csrc/aten/backends/ascend/generated/*` | `codegen_ascend.py` | **manual** (needs Ascend ATen headers) |
-| `csrc/aten/backends/gcu/generated/{gcu_kernels.cc,gcu_register.inc}` | `codegen_gcu.py` | **manual** (needs GCU ATen headers) |
-| `csrc/aten/backends/gcu/generated/gcu_flaggems_register.inc` | `codegen_gcu_flaggems.py` | `codegen_gcu_flaggems.py --check` — **CI** |
-| `csrc/aten/backends/musa/generated/{musa_kernels.cc,musa_register.inc}` | `codegen_mudnn.py` | **manual** (needs MUSA ATen headers) |
-| `csrc/aten/backends/musa/generated/musa_flaggems_register.inc` | `codegen_musa_flaggems.py` | `codegen_musa_flaggems.py --check` — **CI** |
+| `csrc/aten/backends/enflame/generated/{gcu_kernels.cc,gcu_register.inc}` | `codegen_gcu.py` | **manual** (needs GCU ATen headers) |
+| `csrc/aten/backends/enflame/generated/gcu_flaggems_register.inc` | `codegen_gcu_flaggems.py` | `codegen_gcu_flaggems.py --check` — **CI** |
+| `csrc/aten/backends/mthreads/generated/{musa_kernels.cc,musa_register.inc}` | `codegen_mudnn.py` | **manual** (needs MUSA ATen headers) |
+| `csrc/aten/backends/mthreads/generated/musa_flaggems_register.inc` | `codegen_musa_flaggems.py` | `codegen_musa_flaggems.py --check` — **CI** |
 | `csrc/aten/backends/kunlunxin/generated/{kunlunxin_kernels.cc,kunlunxin_register.inc}` | `codegen_kunlunxin.py` | `codegen_kunlunxin.py --check` — **CI** |
 | `csrc/aten/backends/iluvatar/generated/{iluvatar_kernels.cc,iluvatar_register.inc}` | `codegen_iluvatar.py` | `codegen_iluvatar.py --check` — **CI** |
-| `csrc/aten/backends/mps/generated/{mps_kernels.mm,mps_register.inc}` | `codegen_mps.py` | `codegen_mps.py --check` — **CI** |
+| `csrc/aten/backends/apple/generated/{mps_kernels.mm,mps_register.inc}` | `codegen_mps.py` | `codegen_mps.py --check` — **CI** |
 | `torch_fl/configs/backends_*.conf` | `gen_vendor_confs.py` | `gen_vendor_confs.py --check` — **CI**; `tests/unit/test_gen_vendor_confs.py` and `tests/unit/test_conf_registration_consistency.py` enforce the same contract |
 | `csrc/profiler/generated/cupti_runtime_cbid.txt` and `cupti_runtime_cbid_names.inc` | `gen_cupti_runtime_cbid.py` | `gen_cupti_runtime_cbid.py --check` — **CI**; `tests/unit/test_cupti_runtime_cbid_table.py` enforces the same contract |
 | `torch_fl/tileops/generated/*` | `codegen_tileops.py` | `codegen_tileops.py --check` — **manual** (needs torch + tileops) |

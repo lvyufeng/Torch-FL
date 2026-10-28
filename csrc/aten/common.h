@@ -21,18 +21,26 @@ namespace at::native::flagos {
 // never stored in the BackendTable and never returned by GetBackendForOp.
 // Keep it last so the real backends stay contiguous.
 enum class Backend {
-  kCuda,
+  // The CUDA-ABI boxing kernel: re-dispatch PrivateUse1 to CUDA into a vendor's
+  // own libtorch (DeviceBoxingGuard) instead of launching a kernel of our own.
+  // Named for what it does, not for the runtime it borrows -- MetaX, Hygon DCU
+  // and the T-Head PPU all route through this one slot. Conf key: boxing
+  // ("cuda" is the legacy spelling, still parsed).
+  kBoxing,
   kFlagGemsCpp,    // FlagGems C++ runtime (liboperators.so, conf key: flaggems_cpp)
   kFlagGems,       // FlagGems Python/Triton path (conf key: flaggems)
+  // One value per vendor, spelled the way its conf key is (see AGENTS.md,
+  // "Platform names"). These three used to be named after the SDK rather than
+  // the vendor.
   kAscend,
-  kMusa,
+  kMthreads,       // conf key: mthreads
   kMetax,
   kTsingMicro,
-  kGcu,
+  kEnflame,        // conf key: enflame
   kKunlunxin,
   kIluvatar,
   kTileOps,
-  kMps,            // Apple Metal / MPSGraph (conf key: mps)
+  kApple,          // Apple Metal / MPSGraph (conf key: apple)
   // No accelerated implementation on this platform. The op is deliberately not
   // registered on PrivateUse1, so it reaches the boxed cpu_fallback instead of
   // arriving here with an empty kernel slot. Recorded explicitly (rather than
@@ -46,7 +54,7 @@ enum class Backend {
 // Config file path, in order of precedence:
 //   1. SetBackendConfigPath(), called by torch_fl._select_backend_config()
 //   2. $FLAGOS_BACKEND_CONFIG
-//   3. torch_fl/configs/backends_cuda.conf, located from this library's own path
+//   3. torch_fl/configs/backends_nvidia.conf, located from this library's own path
 // Format: "op_name = backend"
 //   backend: "flaggems_cpp" -- FlagGems C++ path (liboperators.so)
 //            "flaggems"     -- FlagGems Python (Triton) path
@@ -150,7 +158,7 @@ bool LogEnabled(const char* item);
 //   RuntimeError: Pipeline run failed: PassManager execution failed
 //
 // from `error: 64-bit data type not supported on GCU300!`. Measured on the
-// shipped `backends_gcu.conf` (torch 2.10.0+cpu, S60, card 2): `clamp`,
+// shipped `backends_enflame.conf` (torch 2.10.0+cpu, S60, card 2): `clamp`,
 // `clamp_min`, `clamp_max`, `clamp_`, `fmod.Tensor` and `rsub.Scalar` over
 // int64 hit one or the other, and `remainder.Tensor` over int64 is worse
 // than either -- it returns a plausible int32 tensor, so nothing upstream

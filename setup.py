@@ -35,9 +35,70 @@ from setuptools.command.editable_wheel import editable_wheel as _editable_wheel
 IS_DARWIN = platform.system() == "Darwin"
 IS_WINDOWS = platform.system() == "Windows"
 
-# Accelerator platform: "cuda" (default), "ppu", "metax", "kunlunxin",
-# "iluvatar", "ascend", "tsingmicro", "dcu", "gcu", "musa", or "bpu"
-FLAGOS_ACCELERATOR = os.environ.get("FLAGOS_ACCELERATOR", "cuda").lower()
+#: Vendor layer -> build-table platform id, mirroring ``vendor`` in
+#: cmake/flagos_platforms.json (a test keeps the two equal). A build may name
+#: either half: the vendor (nvidia, hygon, mthreads, enflame, thead, drobotics,
+#: apple) or the platform id that keys the table (cuda, dcu, musa, gcu, ppu,
+#: bpu, mps). The vendor is the public name -- it is also the
+#: flagos-pypi-<lane> a wheel publishes to -- while the platform id stays the
+#: table/cmake/CI key, so a wheel built as either lands on the same row.
+_VENDOR_TO_PLATFORM = {
+    "ascend": "ascend",
+    "apple": "mps",
+    "drobotics": "bpu",
+    "enflame": "gcu",
+    "hygon": "dcu",
+    "iluvatar": "iluvatar",
+    "kunlunxin": "kunlunxin",
+    "metax": "metax",
+    "mthreads": "musa",
+    "nvidia": "cuda",
+    "thead": "ppu",
+    "tsingmicro": "tsingmicro",
+}
+
+
+def _normalize_accelerator(raw: str) -> str:
+    """Build-table platform id for a FLAGOS_ACCELERATOR value.
+
+    Identity for a platform id (the historical spelling every CI lane and doc
+    uses), a mapping for a vendor name, "" for anything unknown (the caller
+    reports it against the table's own list). A vendor name prints one line
+    saying which row it resolved to, so a log of the build names both halves.
+    """
+    value = raw.strip().lower()
+    if value in _VENDOR_TO_PLATFORM:
+        platform = _VENDOR_TO_PLATFORM[value]
+        if platform != value:
+            print(
+                f"[setup] FLAGOS_ACCELERATOR={value} is the vendor name; "
+                f"building the '{platform}' platform ({value})"
+            )
+        return platform
+    # The vendor is also accepted as the value the build switches resolve for:
+    # an accelerator whose vendor is not a table key (apple for mps, drobotics
+    # for bpu) arrives at _platform_entry() as that vendor, and the row it needs
+    # is keyed by the platform id `_VENDOR_TO_PLATFORM` maps it back to.
+
+    # The Nexus lane spells D-Robotics with a hyphen; identifiers cannot.
+    if value == "d-robotics":
+        # The Nexus lane spelling; identifiers and the table drop the hyphen.
+        return "bpu"
+    return value
+
+
+FLAGOS_ACCELERATOR = _normalize_accelerator(
+    os.environ.get("FLAGOS_ACCELERATOR", "cuda")
+)
+
+#: Build-table platform id -> vendor, for the build record. A wheel records the
+#: vendor, because that is the name every runtime reader compares against (the
+#: accelerator selects a conf, drives the packaging policy and picks the vendor
+#: hooks); the platform id stays the table/cmake/CI key so the switch lists, the
+#: pins and the lane files keep resolving.
+_PLATFORM_TO_VENDOR = {
+    platform: vendor for vendor, platform in _VENDOR_TO_PLATFORM.items()
+}
 
 # Where the sources live. Distinct from BASE_DIR, which is repointed at a
 # scratch tree when the generated files are redirected somewhere else -- the
@@ -65,15 +126,25 @@ def _platform_table() -> dict:
 
 
 def _platform_entry(accelerator: str) -> dict:
-    """One accelerator's row from the shared table (raises on an unknown id)."""
+    """One accelerator's row from the shared table (raises on an unknown id).
+
+    Accepts either half of the name: the table key (cuda, dcu, ...) or the
+    vendor (nvidia, hygon, ...), since both are legal FLAGOS_ACCELERATOR values
+    and callers pass whichever they have.
+    """
     table = _platform_table()
+    rows = table["accelerators"]
     try:
-        return table["accelerators"][accelerator]
+        return rows[accelerator]
     except KeyError:
-        known = ", ".join(sorted(table["accelerators"]))
-        raise ValueError(
-            f"Unknown FLAGOS_ACCELERATOR '{accelerator}'. Expected one of: {known}"
-        ) from None
+        pass
+    for row in rows.values():
+        if row.get("vendor") == accelerator:
+            return row
+    known = ", ".join(sorted(set(rows) | {r["vendor"] for r in rows.values()}))
+    raise ValueError(
+        f"Unknown FLAGOS_ACCELERATOR '{accelerator}'. Expected one of: {known}"
+    ) from None
 
 
 # The kernel sets a build can compile in, and their build-record names, from the
@@ -157,6 +228,30 @@ def make_relative_rpath_args(path):
         return []
     else:
         return ["-Wl,-rpath,$ORIGIN/" + path]
+
+
+def _drop_inherited_platform_marker() -> None:
+    """Delete a lib/flagos_platform this build does not own.
+
+    The marker is what torch_fl/__init__.py names the conf after, so one left by
+    another platform's build in the same (never cleaned) source tree sends this
+    wheel to a conf it cannot route through: a MetaX build that inherited an
+    "mps" marker read the empty backends_apple.conf and raised "routed to
+    'none'" on every op that conf does not list. CMake removes it at install
+    time for these platforms too; this also covers a build whose CMake install
+    step did not run, and an in-place editable install.
+    """
+    writes_marker = _platform_entry(FLAGOS_ACCELERATOR)["writes_platform_marker"]
+    marker = os.path.join(BASE_DIR, "torch_fl", "lib", "flagos_platform")
+    if not writes_marker and os.path.isfile(marker):
+        os.remove(marker)
+
+
+if RUN_BUILD_DEPS:
+    # Before CMake installs anything: the install step may leave an inherited
+    # marker in place until it runs, and a build that fails earlier must not
+    # leave the tree claiming another platform.
+    _drop_inherited_platform_marker()
 
 
 def get_pytorch_dir():
@@ -624,6 +719,15 @@ def _torch_cxx11_abi() -> str:
 def build_deps():
     build_dir = os.path.join(BASE_DIR, "build")
     os.makedirs(build_dir, exist_ok=True)
+    # The MetaX cu-bridge shim, built at import and loaded RTLD_GLOBAL, has to be
+    # live in the process CMake runs as well: a rebuild also compiles the device
+    # sources against cu-bridge, and without the shim they fail at the first
+    # cuda* symbol. It is a separate process, so this is not the import-time load.
+    if FLAGOS_ACCELERATOR == "metax":
+        try:
+            _ensure_metax_cudart_shim()
+        except OSError as error:
+            print(f"[setup] no MetaX cudart shim for the CMake step: {error}")
 
     cmake_args = [
         "-DCMAKE_INSTALL_PREFIX="
@@ -648,6 +752,14 @@ def build_deps():
         cmake_args.append("-DFLAGOS_TORCH_CXX11_ABI=" + torch_cxx11_abi)
 
     cmake_args.append(f"-DFLAGOS_ACCELERATOR={FLAGOS_ACCELERATOR}")
+    aliases = _platform_aliases(FLAGOS_ACCELERATOR)
+    if aliases:
+        # The names, then the one CMake enters. A list (-D a;b), not a JSON
+        # array: it needs no quoting after `=`, and cmake/FlagosPlatforms.cmake
+        # reads the last item as the target for any of the others.
+        cmake_args.append(
+            "-DFLAGOS_ACCELERATOR_ALIASES=" + ";".join(aliases + [FLAGOS_ACCELERATOR])
+        )
 
     # What gets compiled in, resolved in one place so the wheel can describe
     # itself accurately. _kernel_switches() is also what _write_build_config()
@@ -699,7 +811,23 @@ def build_deps():
         corex_root = _setup_iluvatar_build_env(build_env)
         cmake_args.append(f"-DCOREX_PATH={corex_root}")
 
-    subprocess.check_call([cmake, BASE_DIR] + cmake_args, cwd=build_dir, env=build_env)
+    configure = [cmake, BASE_DIR] + cmake_args
+    subprocess.check_call(configure, cwd=build_dir, env=build_env)
+
+    if "Ninja" in cmake_args:
+        # Ninja regenerates the build files when their source is newer than they
+        # are, and a second `cmake --build` does that check again on what the
+        # first one wrote: "manifest 'build.ninja' still dirty after 100 tries,
+        # perhaps system time is not set". Every OTHER source file is older
+        # than the manifest by now; build.ninja itself is the one new input a
+        # rebuild always sees, and its rule is CMAKE_SUPPRESS_REGENERATION.
+        # (Reconfiguring instead does not settle it -- the regen runs
+        # regardless.)
+        subprocess.check_call(
+            [cmake, "-DCMAKE_SUPPRESS_REGENERATION=ON", BASE_DIR],
+            cwd=build_dir,
+            env=build_env,
+        )
 
     build_args = [
         "--build",
@@ -720,6 +848,7 @@ def build_deps():
     _verify_built_native_libs()
     _bundle_cuda_assets()
     _write_build_config()
+    _write_environment_platform_alias()
 
 
 def _write_build_config() -> None:
@@ -727,7 +856,7 @@ def _write_build_config() -> None:
 
     torch_fl._select_backend_config() runs at import time, before `import torch`,
     so it cannot sniff torch.version.hip to tell a DCU build apart. Recording the
-    accelerator as ACCELERATOR here lets it pick backends_dcu.conf without the
+    accelerator as ACCELERATOR here lets it pick backends_hygon.conf without the
     user having to keep FLAGOS_ACCELERATOR set at run time.
 
     The two attribute names are the record's own vocabulary, not the switches':
@@ -753,8 +882,79 @@ def _write_build_config() -> None:
     path = os.path.join(BASE_DIR, "torch_fl", "_build_config.py")
     content = (
         "# AUTO-GENERATED by setup.py at build time. Do not edit.\n"
-        f'ACCELERATOR = "{FLAGOS_ACCELERATOR}"\n'
+        f'ACCELERATOR = "{_PLATFORM_TO_VENDOR.get(FLAGOS_ACCELERATOR, FLAGOS_ACCELERATOR)}"\n'
         f"KERNELS = ({body})\n"
+    )
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(content)
+
+
+def _platform_aliases(accelerator: str) -> list[str]:
+    """Every other name for `accelerator`'s platform: its vendor, when it differs.
+
+    CMake's per-platform enters are one spelling per platform -- `_flagos_is_<id>`
+    for most, `_flagos_is_metax` for the row whose vendor is also its id -- so a
+    build told the vendor of a row whose id differs (`mthreads`, `hygon`,
+    `apple`, `nvidia`) was left on the default arms, and a build told the row
+    that shares `metax`'s vendor stayed there rather than entering the CUDA
+    arms its toolkit answers. Both sides resolve any name in this list to its
+    last item, which is the row. Takes its argument rather than reading the
+    build's: a later read of setup.py must answer for this build only.
+    """
+    target = _alias_target(accelerator)
+    return [] if target is None else [accelerator, target]
+
+
+def _alias_target(platform: str) -> str | None:
+    """The row `platform` resolves to, when that is not itself.
+
+    The vendor, when it differs from the id; for a row that is its own vendor
+    (`metax`) the id of the platform it shares a vendor with, because its
+    toolkit answers that platform's arms. No other row shares a vendor, so the
+    answer is a fact of the table rather than a lookup here.
+    """
+    vendor = _PLATFORM_TO_VENDOR.get(platform)
+    if vendor is None:
+        return None
+    if vendor != platform:
+        return vendor
+    return _SHARED_VENDOR.get(platform)
+
+
+#: A row whose vendor is also its id, and the row it shares that vendor with.
+_SHARED_VENDOR = {"metax": "cuda"}
+
+
+def _write_environment_platform_alias() -> None:
+    """Let this build enter the other spelling of its platform.
+
+    A build is told either its platform id or its vendor (`FLAGOS_ACCELERATOR`
+    accepts both), but the environment of a later process may carry the one
+    this build was not told. CMake enters exactly one spelling
+    (`_flagos_is_<id>`), so the other fell through to the default arms -- a
+    MetaX build told `nvidia` compiled the NVIDIA runtime sources and then
+    asked for Ascend's headers. The vendor of the value the environment
+    carried is an alias even where the table keys the platform by it (`metax`
+    is both), because CMake's per-platform enters for that name are `metax`'s
+    and the arms the platform needs are keyed on the id.
+
+    CMake writes the platform marker before any of this (it runs first); this
+    file carries the same facts to torch_fl, which reads it in preference to the
+    marker so a `metax` marker still resolves to `metax`.
+    """
+    path = os.path.join(BASE_DIR, "torch_fl", "_platform_alias.py")
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    content = (
+        "# AUTO-GENERATED by setup.py at build time. Do not edit.\n"
+        '"""The table row this wheel was built for, and the other names for it."""\n'
+        "\n"
+        f"ACCELERATOR = {FLAGOS_ACCELERATOR!r}\n"
+        f"ALIASES = {_platform_aliases(FLAGOS_ACCELERATOR)!r}\n"
+        "\n"
+        "\n"
+        "def platform_from(name):\n"
+        '    """``name`` as the table id this wheel was built for."""\n'
+        "    return ACCELERATOR if name in ALIASES else name\n"
     )
     with open(path, "w", encoding="utf-8") as f:
         f.write(content)
@@ -811,7 +1011,7 @@ def _bundle_cuda_assets() -> None:
 
     torch_fl's CUDA backend reuses PyTorch's registered CUDA kernels via an
     externally-supplied libtorch_cuda.so (CPU-only pip torch does not ship it).
-    Historically this was LD_PRELOAD-ed by scripts/vendor/with_cuda_libtorch.sh; for a
+    Historically this was LD_PRELOAD-ed by scripts/vendor/with_nvidia_libtorch.sh; for a
     single self-contained wheel we bundle the assets and preload them from
     torch_fl/__init__.py before `import torch` (see that doc, constraint 1).
     CUDA only.
@@ -933,7 +1133,7 @@ def _verify_built_native_libs() -> None:
         )
     if FLAGOS_ACCELERATOR == "dcu":
         shim = os.path.join(
-            BASE_DIR, "torch_fl", "lib_dcu", "libflagos_dtk_core_compat.so"
+            BASE_DIR, "torch_fl", "lib_hygon", "libflagos_dtk_core_compat.so"
         )
         if not os.path.isfile(shim):
             raise RuntimeError(
@@ -998,21 +1198,22 @@ class BuildExtWithCmake(_build_ext):
         # list, so copy late-generated files explicitly into wheel staging.
         relative_paths = [
             "_build_config.py",
+            "_platform_alias.py",
             "compatibility.json",
             "lib/flagos_platform",
             "include/flagos.h",
         ]
         patterns = ["lib/*.so*", "lib/*.dylib*", "lib/*.dll", "lib/*.lib"]
         if FLAGOS_ACCELERATOR == "metax":
-            patterns.extend(("lib_maca/*.so*", "lib_maca/vendor_version.py"))
+            patterns.extend(("lib_metax/*.so*", "lib_metax/vendor_version.py"))
         if FLAGOS_ACCELERATOR == "ppu":
-            patterns.extend(("lib_ppu/*.so*", "lib_ppu/vendor_version.py"))
+            patterns.extend(("lib_thead/*.so*", "lib_thead/vendor_version.py"))
         if FLAGOS_ACCELERATOR == "dcu":
-            # cmake installs the core-ABI shim straight into lib_dcu during
+            # cmake installs the core-ABI shim straight into lib_hygon during
             # build_ext. build_py has already cached its file list by then, so
             # copy it (and any pre-bundled device assets) into wheel staging just
             # like the native libs under lib/.
-            patterns.extend(("lib_dcu/*.so*", "lib_dcu/vendor_version.py"))
+            patterns.extend(("lib_hygon/*.so*", "lib_hygon/vendor_version.py"))
         for pattern in patterns:
             relative_paths.extend(
                 os.path.relpath(path, os.path.join(BASE_DIR, "torch_fl"))
@@ -1149,18 +1350,18 @@ def _get_setup_kwargs():
             # here so the process loads that C++ runtime without a separate
             # vendor torch wheel (see scripts/vendor/bundle_*_libtorch.sh, and
             # torch_fl/accelerator/_vendor_libtorch.py for private selection).
-            # The trailing * matters for lib_dcu: DTK's auditwheel-mangled
+            # The trailing * matters for lib_hygon: DTK's auditwheel-mangled
             # torch.libs deps end in a version suffix (libglog-6ed04f2c.so.0.0.0).
-            "lib_maca/*.so*",
-            "lib_maca/vendor_version.py",
-            "lib_dcu/*.so*",
+            "lib_metax/*.so*",
+            "lib_metax/vendor_version.py",
+            "lib_hygon/*.so*",
             # DTK torch's own version.py, carried so _restore_dcu_hip_version()
             # can hand triton's hcu backend the hip/rocm strings the stock +cpu
             # torch in front does not have. Needed explicitly: the globs above
             # only match *.so*.
-            "lib_dcu/vendor_version.py",
-            "lib_ppu/*.so*",
-            "lib_ppu/vendor_version.py",
+            "lib_hygon/vendor_version.py",
+            "lib_thead/*.so*",
+            "lib_thead/vendor_version.py",
             "include/*.h",
             # The native comm bridge's source, so the standalone builder
             # (comm/_nccl_ext/build.py) can still rebuild the extension from an
@@ -1170,10 +1371,10 @@ def _get_setup_kwargs():
             "comm/_nccl_ext/*.cpp",
             # The DTK-private symbol manifest that libflagos_dtk_core_compat.so
             # must export, shipped so an installed wheel can be re-audited with
-            # scripts/vendor/check_dcu_core_abi.py against a different DTK release.
-            "accelerator/dcu/dtk_core_compat_symbols.txt",
+            # scripts/vendor/check_hygon_core_abi.py against a different DTK release.
+            "accelerator/hygon/dtk_core_compat_symbols.txt",
             # All backend configs, not just the default: per-op routing tables
-            # read by torch_fl at import (backends_cuda.conf /
+            # read by torch_fl at import (backends_nvidia.conf /
             # backends_metax.conf, ...). Now consolidated under configs/.
             "configs/backends*.conf",
             "codegen_skip_ops.txt",
@@ -1222,7 +1423,6 @@ def _get_setup_kwargs():
         packages=find_packages(
             include=["torch_fl*", "accelerator*", "csrc.runtime.accelerator*"]
         ),
-        scripts=["scripts/tools/torch-fl-preflight"],
         package_dir={"": "."},
         package_data=package_data,
         ext_modules=ext_modules,
@@ -1242,25 +1442,6 @@ def _get_setup_kwargs():
         # (_install_requires), and `pip install torch_fl[cuda]` is unaffected --
         # it never resolved to anything.
     )
-    if FLAGOS_ACCELERATOR == "mps":
-        # A bare import of PyTorch must leave torch.backends.mps as the active
-        # accelerator. The MPS build has no device-backend autoload consumer:
-        # it uses no FlagTree compile workers, and every user of the native
-        # flagos backend imports torch_fl explicitly. Omitting the entry point
-        # also keeps the two PrivateUse1 backends independent in a process that
-        # only asks for MPS. pyproject.toml lists entry-points as dynamic, so
-        # this omission is part of the wheel metadata rather than a runtime
-        # check.
-        kwargs["entry_points"] = {}
-    else:
-        # pyproject.toml must declare entry-points dynamic for the MPS branch
-        # above. An *empty* static table there still installs the `torch_fl`
-        # console script; restore the source's own table for every other wheel.
-        kwargs["entry_points"] = {
-            "torch.backends": [
-                "torch_fl = torch_fl._autoload:init",
-            ]
-        }
     return kwargs
 
 
@@ -1374,7 +1555,7 @@ def _flagos_sibling_requires() -> list:
     if FLAGOS_ACCELERATOR == "mps":
         # Apple Silicon (Metal) is a native backend with no vendor operator
         # library: no FlagTree/Triton line exists for Metal, and the platform
-        # table turns FlagGems and FlagCX off too (backends_mps.conf is empty).
+        # table turns FlagGems and FlagCX off too (backends_apple.conf is empty).
         # Declaring Triton here would be unsatisfiable -- it publishes no macOS
         # wheel -- so the MPS wheel ships with only torch and packaging.
         return []

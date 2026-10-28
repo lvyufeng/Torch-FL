@@ -14,11 +14,11 @@ implementation. Python selects the provider by the compiled `_dcu_stream_info`
 capability, not by a runtime environment override. The default remains boxing
 OFF; this change does not claim to add multistream support to that default.
 
-This change must remain draft until the exact candidate's ON/OFF wheel builds
-and device tests have completed. Local unit tests and syntax checks are not a
-substitute for those gates. The latest source-built ON fixture passed all 13
-device cases; a complete DCU wheel is still blocked by the separate
-`_flagos_nccl` extension build.
+The original #627 snapshot remained draft while standard ON/OFF wheel and
+device gates were outstanding. Its separate `_flagos_nccl` build blocker was
+subsequently addressed by #654. The contributor-side current-main follow-up below
+supersedes that old build-blocked result; it does not substitute for maintainer
+review, all-platform CI or the official published-dependency cohort.
 
 ## Execution and lifetime contract
 
@@ -97,6 +97,55 @@ For OFF, inspect `compile_commands.json` and the dynamic symbol table: the new
 provider must be absent, and the new Python `_dcu_*` methods must not be exported.
 Then compare import and existing runtime tests with the unmodified OFF baseline.
 Do not turn a failing baseline into a claim that the OFF runtime is validated.
+
+## Current-main follow-up, 2026-10-26
+
+The follow-up merges #627 head `d2b4f90` with upstream `2fa7631`, including #654
+and #655. Runtime source `e999531` produced both standard wheels, including the
+normal native communication extension; no target was excluded. Subsequent
+changes are test isolation/import order and this documentation, not runtime
+implementation changes.
+
+The provider imports now follow the Hygon directory rename, and compile-interface
+repair matches the actual `hygon` profile token. The MUSA dispatch test loads an
+isolated compatibility facade against its mocked extension rather than reusing
+an already-bound host DCU class. Its transitive imports see that same facade;
+the installed host provider objects are not modified.
+
+Contributor-side evidence on gfx936, DTK 26.04, glibc 2.28, Python 3.10 and
+official Torch 2.10.0+cpu:
+
+| Gate | Observed result |
+|---|---|
+| Standard ON and OFF wheel builds | Both complete, native communication extension included |
+| OFF capability and dynamic provider-symbol isolation | Pass |
+| Corrected MUSA dispatch file on installed ON / OFF wheels | 9 / 9 passed, zero skips |
+| Targeted DCU contract/build/shim files | 84 passed, zero skips |
+| Two-device real-stream suite, fresh compile caches, eager fallback disabled | 13 passed, zero skips |
+| Four-rank 2x2 HYBRID_SHARD, root-only inference under inference_mode | 3 iterations, all ranks match CPU |
+| Four-rank 2x2 HYBRID_SHARD, nested FSDP inference | 3 iterations, all ranks match CPU |
+| Four-rank HYBRID_SHARD training | 3 forward/backward/SGD steps and full-parameter CPU comparison, all ranks pass |
+
+Those HSDP probes use Linear/ReLU/Linear and `use_orig_params=True`. Loaded
+libraries and communicator logs confirm native RCCL, with staged Gloo disabled.
+They are not a production-model, long-run, AMP, checkpoint, multi-node or general
+ProcessGroup/Work lifetime certification.
+
+This host uses the compatible portable FlagTree
+`0.7.0rc2+hcu3.6.glibc228.compat1.git76201fd9` and FlagGems
+`5.5.0.dev0+g1285f5d6a`; the result is not certification of the official release
+resolver/dependency pins. Shared Base/Release packages and activation entries were
+not changed.
+
+For current-main ON validation, explicitly select the official
+`backends_hygon_boxing.conf`, as the #655 boxing registration contract requires.
+OFF uses the default `backends_hygon.conf`. Do not confuse a default-conf negative
+control with the boxing lane, edit generated conf files, or silently repin ops.
+Preload `torch_fl` before Torch/pytest plugins cache the CPU wheel's CUDA hooks.
+Expose the real DTK CUDA tool directory and supported GCC toolchain on PATH;
+Inductor's CUDA system-info probe invokes `nvcc` even for this HIP-backed runtime.
+The two initially failing compile gates passed after restoring those documented
+toolchain paths, without a fake compiler, core monkeypatch or eager fallback.
 
 ## Not included
 

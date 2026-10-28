@@ -27,7 +27,7 @@ Operator tests (`tests/integration/ops/`) use markers to select backend-specific
 |--------|---------|-------------|
 | `main_ops` | Representative operator in the CI smoke subset | Applied to frequently-used ops (add, matmul, conv, etc.) for fast feedback |
 | `anyplatform` | Runs on any accelerator backend | Device-agnostic tests (operator registration, dispatch routing) |
-| `cuda` | Requires a CUDA boxing build (`FLAGOS_BUILD_BOXING=1`); the default FlagGems-primary wheel has no `cuda` route, so the CUDA lane skips these | Tests asserting `-> cuda` backend routing |
+| `cuda` | Requires a CUDA boxing build (`FLAGOS_BUILD_BOXING=1`); the default FlagGems-primary wheel has no `cuda` route, so the CUDA lane skips these | Tests asserting `-> boxing` backend routing |
 | `metax` | Requires MetaX C++ (mxcc) backend | Tests asserting `-> metax` backend routing; skipped on MetaX (its lane builds the boxing wheel) |
 | `ascend` | Requires Ascend ACL backend | Tests asserting `-> ascend` backend routing |
 | `musa` | Requires Moore Threads MUSA backend | Tests asserting `-> musa` backend routing |
@@ -52,7 +52,7 @@ Both support modules share `platform_support.detect_platform()` and must not imp
 
 ### Platform Detection
 
-Test filtering is automatic: `conftest.py` detects the active platform from the wheel's build record (`_build_config.py`, plus the `PPU_SDK` environment or the `lib_ppu/` bundle for wheels that predate PPU's own record value), `lib/flagos_platform`, or the name of the conf `torch_fl.backend_config_path()` reports, and skips tests marked for unavailable backends.
+Test filtering is automatic: `conftest.py` detects the active platform from the wheel's build record (`_build_config.py`, plus the `PPU_SDK` environment or the `lib_thead/` bundle for wheels that predate PPU's own record value), `lib/flagos_platform`, or the name of the conf `torch_fl.backend_config_path()` reports, and skips tests marked for unavailable backends.
 
 ## Running Tests
 
@@ -108,12 +108,12 @@ variable to keep in step by hand. Actual routing still follows the conf's
 exact ATen overloads on real accelerator hardware. It is a manual survey, not a
 pytest test, and ordinary CI does not invoke it.
 
-Run it with the platform conf under test (`backends_cuda.conf` on a CUDA host;
+Run it with the platform conf under test (`backends_nvidia.conf` on a CUDA host;
 each vendor has its own `backends_<platform>.conf`):
 
 ```bash
 python tests/manual/flaggems_overload_survey.py \
-  --conf torch_fl/configs/backends_cuda.conf \
+  --conf torch_fl/configs/backends_nvidia.conf \
   --out /tmp/flaggems-overloads.json
 ```
 
@@ -367,6 +367,17 @@ timeout, provisioning stage, and test manifest all come from the config, so addi
 step means editing only the config: nothing lists tests inline, and there is no per-platform
 workflow to copy. Keeping `yq` off the vendor images is deliberate, so no accelerator container
 needs a YAML dependency.
+
+A platform that can build CUDA boxing runs **two lanes**: its vendor lane (`<platform>`) and
+its boxing lane (`<platform>-boxing`), scheduled together by `generate_matrix.py` from
+`boxing_lane: true` in its config. Naming the platform in a dispatch (or `/ci run <platform>`)
+selects both; there is no way to run one without the other. The two lanes compose the same
+manifest -- the same groups, in the same order -- and differ in exactly two places: the
+`vendor_ops` entry, which carries `boxing_variant: [<platform>]` and therefore runs only on the
+boxing build (the vendor build's selection cannot answer the boxing conf), and the environment
+check, where the boxing lane is held to `boxing_environment_check` instead of `environment_check`. The hook builds the boxing wheel when the job is the boxing lane (it reads
+`BOXING_LANE` from the loader) and publishes under `wheel-<platform>-boxing` so the two artifacts
+cannot overwrite each other.
 
 There is no generic integration fallback. A selected platform without a config fails discovery
 instead of being silently omitted. `build-wheel.yml` -- the one parameterized wheel build, used by

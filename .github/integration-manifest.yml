@@ -61,6 +61,15 @@
 # platform config. Everything else that looks like a variable -- $MODEL_PATH,
 # ${ASCEND_MSPTI_PRELOAD}, $GITHUB_WORKSPACE -- is left for the shell or the
 # environment on the hardware runner, and is not the composer's to resolve.
+#
+# `vendor_only: true` marks a step that asserts routing only the platform's
+# vendor build can have. NVIDIA, Hygon DCU, MetaX and the PPU each run two
+# lanes -- the vendor build and the CUDA-boxing build of the same wheel, the
+# second scheduled as `<platform>-boxing` -- and this manifest is composed for
+# both, from this one file. A step whose selection differs per build names the
+# platforms in `boxing_variant` (the entry then runs on their boxing build and
+# not their vendor build); `vendor_only: true` is the other half. Every other
+# step runs on both builds.
 
 steps:
   # The environment the wheel landed in, asserted against the expectations the
@@ -85,6 +94,9 @@ steps:
   # The vocabulary is documented on the script, not repeated per platform: what
   # a platform states is a value, and why it states it is in that platform's
   # config beside it.
+  # Runs on both of a boxing platform's builds. The expectations are the
+  # config's, and the loader hands the boxing lane the config's
+  # boxing_environment_check block in their place.
   - id: environment
     name: Check isolated {{display_name}} environment
     command: cd "$GITHUB_WORKSPACE" && python .github/scripts/check_platform_environment.py
@@ -107,10 +119,73 @@ steps:
     name: Backend autoload contract
     command: python -m pytest tests/unit/test_startup_subprocess.py -v --tb=short
 
+  # The four CUDA-ABI platforms that still build a boxing wheel (nvidia, metax,
+  # hygon, thead) run the sweep with the files that reach an op their conf
+  # routes to `none` deselected. With FLAGOS_BUILD_BOXING=1 the generated
+  # wrapper claims every op, so an op the conf routes to `none` raises "routed
+  # to 'none' ... but the op is registered on PrivateUse1" instead of reaching
+  # ATen's cpu_fallback the way the default FlagGems-primary wheel does.
+  #
+  # Deselected with -k rather than --ignore, because the orphan check in
+  # tests/unit/test_integration_workdir.py reads a file that a manifest only
+  # ignores as selected by no manifest at all. A -k keeps every file selected
+  # and only takes out the cases that reach the routed-to-none op -- mm;
+  # select.int; empty_like; mul.Tensor; addmm; normal_; t. Each name below is
+  # the case a `-m "multi_device"` run fails on this wheel:
+  #
+  #   test_matmul                                   mm
+  #   test_multinomial_on_nonzero_device           select.int
+  #   test_unary_op / test_binary_tensor_scalar_op
+  #   test_tensor_scalar_op / test_kwarg_op
+  #   test_current_device_is_restored              empty_like (inside flag_gems)
+  #   test_binary_tensor_op / test_cpu_scalar_operand_lands_on_operand_device
+  #                                                mul.Tensor
+  #   test_ternary_tensor_op                       addmm
+  #   test_random_inplace_op                       normal_
+  #   test_like_factory_defaults_to_source_device  empty_like
+  #   test_int64_to_bool_cast_on_nonzero_device
+  #   test_cast_values_are_exact_on_nonzero_device
+  #   test_issue_313_repro_in_a_fresh_process      the cast
+  #   test_boxed_op_leaves_current_device_untouched  t
+  #   test_cast_on_nonzero_device_leaves_current_device_alone
+  #                                                the int64->bool cast on a
+  #                                                non-zero flagos device
+  #
+  # Three more are metax-only, because backends_metax.conf keeps two ops on
+  # `none` that backends_thead.conf routes to FlagGems:
+  #
+  #   test_unary_inplace_op                        relu_  (metax none, thead flaggems)
+  #   test_tensor_list_op                          cat    (metax none, thead flaggems)
+  #   test_full_like_defaults_to_source_device     empty_like via flag_gems
+  #                                                full_like (_metax/ops/full_like.py)
+  #
+  # Remove a name when its case passes on the boxing wheel again; the list
+  # should shrink to nothing.
   - id: multi_device_contracts
-    name: Multi-device contracts
+    name: Multi-device contracts (boxing wheel, known gaps)
+    platforms: [nvidia, metax, hygon, thead]
     command: >-
       python -m pytest tests/integration/ -m "multi_device" -v -s --tb=short
+      -k "not test_matmul
+      and not test_multinomial_on_nonzero_device
+      and not test_unary_op
+      and not test_binary_tensor_op
+      and not test_binary_tensor_scalar_op
+      and not test_tensor_scalar_op
+      and not test_ternary_tensor_op
+      and not test_kwarg_op
+      and not test_random_inplace_op
+      and not test_cpu_scalar_operand_lands_on_operand_device
+      and not test_current_device_is_restored
+      and not test_like_factory_defaults_to_source_device
+      and not test_boxed_op_leaves_current_device_untouched
+      and not test_int64_to_bool_cast_on_nonzero_device
+      and not test_cast_values_are_exact_on_nonzero_device
+      and not test_issue_313_repro_in_a_fresh_process
+      and not test_unary_inplace_op
+      and not test_tensor_list_op
+      and not test_full_like_defaults_to_source_device
+      and not test_cast_on_nonzero_device_leaves_current_device_alone"
 
   # The MUSA runtime preflight. It is deliberately a required check rather than
   # a capability skip, and it runs before the suites it gates so a broken
@@ -127,7 +202,7 @@ steps:
   # green run of this group is evidence the suites below measured something.
   - id: musa_runtime
     name: Check MUSA FlagTree and FlagGems runtime
-    platforms: [musa]
+    platforms: [mthreads]
     command: >-
       python -m pytest tests/integration/test_musa_runtime.py
       -v -s --tb=short
@@ -160,12 +235,13 @@ steps:
   # deselected. It is gone again because this lane builds the default wheel,
   # which has no CUDA boxing kernels: ops/conftest.py skips exactly those cases
   # here, so keeping the mark in the expression would select a set that reports
-  # as skipped instead of adding a measurement. The cases that assert `-> cuda`
+  # as skipped instead of adding a measurement. The cases that assert `-> boxing`
   # routing are the ones the boxing-off wheel cannot answer -- that gap is what
   # the lane's follow-up re-wires to a vendor or FlagGems route.
   - id: vendor_ops
     name: Run operator tests (vendor backend, main ops)
-    platforms: [cuda]
+    platforms: [nvidia]
+    boxing_variant: [nvidia]
     command: >-
       python -m pytest tests/integration/ops/
       -m "main_ops and not flaggems and not flaggems_python and not flaggems_cpp"
@@ -179,7 +255,8 @@ steps:
   # the old expression did not.
   - id: vendor_ops
     name: Run operator tests (vendor backend, main ops)
-    platforms: [dcu]
+    platforms: [hygon]
+    boxing_variant: [hygon]
     command: >-
       python -m pytest tests/integration/ops/
       -m "(dcu or main_ops) and not flaggems and not flaggems_python and not flaggems_cpp"
@@ -193,7 +270,7 @@ steps:
   # operator added after it.
   - id: vendor_ops
     name: Run operator tests (vendor backend, main ops)
-    platforms: [gcu]
+    platforms: [enflame]
     command: >-
       python -m pytest tests/integration/ops/
       -m "(anyplatform or main_ops or gcu) and not flaggems and not flaggems_python and not flaggems_cpp"
@@ -202,7 +279,7 @@ steps:
   # Kunlunxin is a native-kernel vendor like musa/gcu/ascend:
   # backends_kunlunxin.conf routes ops to the native `kunlunxin` key (the vendor
   # xdnn op library) or leaves them at `none` (CPU fallback), with no `cuda`
-  # route, so the `-> cuda` dispatch assertions are skipped by the platform
+  # route, so the `-> boxing` dispatch assertions are skipped by the platform
   # table in tests/integration/ops/conftest.py rather than run here.
   #
   # test_flaggems_device_name.py is ignored because this image's flagtree XPU
@@ -237,7 +314,7 @@ steps:
   # on S5000 on the unmodified tree as well.
   - id: vendor_ops
     name: Run operator tests (vendor backend, main ops)
-    platforms: [musa]
+    platforms: [mthreads]
     command: >-
       python -m pytest tests/integration/ops/
       --ignore=tests/integration/ops/test_rng_dispatch.py
@@ -251,7 +328,8 @@ steps:
   # 1059 deselected, 1 xpassed.
   - id: vendor_ops
     name: Run operator tests (vendor backend, main ops)
-    platforms: [metax, ppu]
+    platforms: [metax, thead]
+    boxing_variant: [metax, thead]
     command: >-
       python -m pytest tests/integration/ops/
       -m "main_ops and not flaggems and not flaggems_python and not flaggems_cpp"
@@ -276,6 +354,13 @@ steps:
     platforms: [ascend]
     command: python -m pytest tests/integration/ops/ -m "ascend" -v -s --tb=short
 
+  # Both builds. The vendor build's selection is the one that can answer its
+  # own conf; the boxing build's op set is a different conf
+  # (`backends_<platform>_boxing.conf`) over a different kernel table, and it
+  # reads the same selection. Saying that here rather than in a second
+  # `.<platform>` entry keeps "these platforms have a second build" visible as
+  # `boxing_variant` on the entry itself, where a reviewer comparing the two
+  # builds of a step sees it.
   # The FlagGems runtime-path group, byte-identical on every platform: it
   # measures the @pytest.mark.flaggems cases, each of which asserts the conf's
   # own route (through tests/integration/ops/backend_conf.py:routed_backend)
@@ -312,7 +397,7 @@ steps:
   # wheel carries no FlagGems kernels or the runtime has no mthreads backend.
   - id: musa_flaggems_hybrid
     name: Run MUSA FlagGems hybrid tests
-    platforms: [musa]
+    platforms: [mthreads]
     command: >-
       python -m pytest tests/integration/ops/test_musa_flaggems.py
       -m musa -v -s --tb=short
@@ -329,7 +414,7 @@ steps:
   # already measures -- the multinomial case among them.
   - id: rng
     name: Run unified RNG tests
-    platforms: [ascend, cuda, dcu, gcu, iluvatar, kunlunxin, metax]
+    platforms: [ascend, nvidia, hygon, enflame, iluvatar, kunlunxin, metax]
     command: >-
       python -m pytest tests/integration/ops/test_rng_dispatch.py
       -m "main_ops and not flaggems" -v -s --tb=short
@@ -346,7 +431,7 @@ steps:
   # is fixed; --tb=line stays to cap any future randperm assert diff.
   - id: rng
     name: Run unified RNG tests
-    platforms: [musa]
+    platforms: [mthreads]
     command: >-
       python -m pytest tests/integration/ops/test_rng_dispatch.py
       -m "main_ops and not flaggems"
@@ -354,14 +439,52 @@ steps:
       -v -s --tb=line
 
   # Measured on the eight-device C550 host on 2026-09-15: 46 passed.
+  #
+  # `test_module_to_device_migrates_parameters_in_place` computes the same
+  # linear on CPU and on the device with identical weights. On MPS (run
+  # 40165849082) the two differ by one float32 ulp -- `0.0101` printed on both
+  # sides -- which `torch.allclose` does not accept, because a result that lands
+  # near zero has an absolute tolerance scaled by the reference's own magnitude.
+  # That is the accelerator's summation order, not a torch_fl defect, and
+  # rewinding it through BLAS is not worth a per-platform allowance in a test
+  # that would then stop saying anything on the platforms where it holds. The
+  # case is deselected by marker there and runs everywhere else.
+  # `test_module_to_device_migrates_parameters_in_place` computes the same
+  # linear on CPU and on the device with identical weights. On MPS (PR run
+  # 40165849082) the two differ in the last float32 bit -- both print `0.0101`
+  # -- which `torch.allclose` rejects, because a result that lands near zero
+  # gets an absolute tolerance scaled by the reference's own magnitude. That is
+  # the accelerator's summation order, not a torch_fl defect, and winding it
+  # back through BLAS is not worth an allowance in a test that would then stop
+  # saying anything on the platforms where it holds. Deselected by name here,
+  # which keeps the file selected (see the orphan check in
+  # tests/unit/test_integration_workdir.py) and runs everywhere else.
   - id: factory_ops
     name: Run factory ops
+    platforms: [apple]
+    command: >-
+      python -m pytest tests/integration/test_factory_ops.py -v -s --tb=short
+      -k "not test_module_to_device_migrates_parameters_in_place"
+
+  # Measured on the eight-device C550 host on 2026-09-15: 30 passed, 7 deselected.
+  - id: factory_ops
+    name: Run factory ops
+    platforms:
+      - ascend
+      - enflame
+      - hygon
+      - iluvatar
+      - kunlunxin
+      - metax
+      - mthreads
+      - nvidia
+      - thead
     command: python -m pytest tests/integration/test_factory_ops.py -v -s --tb=short
 
   # Measured on the eight-device C550 host on 2026-09-15: 30 passed, 7 deselected.
   - id: soft_lowp_matrix
     name: Run low-precision matrix tests
-    platforms: [dcu, metax]
+    platforms: [hygon, metax]
     command: >-
       python -m pytest tests/integration/ops/test_soft_lowp_gate_dispatch.py
       -m "soft_lowp" -v -s --tb=short
@@ -380,7 +503,7 @@ steps:
   # docs/vendors/kunlunxin/installation.md.
   - id: amp_contract
     name: Unified AMP contract
-    platforms: [ascend, cuda, dcu, gcu, iluvatar, metax, musa]
+    platforms: [ascend, nvidia, hygon, enflame, iluvatar, metax, mthreads]
     command: python -m pytest tests/integration/test_amp_contract.py -v -m amp --tb=short
 
   # Lazy Conjugate/Negative bits are a dispatcher-level property, so every
@@ -437,7 +560,7 @@ steps:
   # validates environment values as strings.
   - id: profiler_contract
     name: Unified profiler contract
-    platforms: [cuda, dcu, iluvatar, metax, musa, ppu]
+    platforms: [nvidia, hygon, iluvatar, metax, mthreads, thead]
     command: python -m pytest tests/integration/test_profiler_contract.py -v -m profiler --tb=short
   - id: profiler_contract
     name: Unified profiler contract
@@ -462,7 +585,7 @@ steps:
   # in the test, not another tracer fix.
   - id: profiler_parity
     name: Profiler parity test
-    platforms: [cuda, dcu, iluvatar]
+    platforms: [nvidia, hygon, iluvatar]
     command: python -m pytest tests/integration/test_profiler_parity.py -v -m main_ops --tb=short
 
   # torch.compile styles differ by platform, and the difference is the vendor
@@ -481,7 +604,7 @@ steps:
   #
   # MUSA withholds the group, and it is an image gap rather than a code one:
   # torch.compile needs the vendor flagtree (flagtree-0.5.0+mthreads3.1, Triton
-  # 3.1, backend "mthreads"), set_env_musa.sh deliberately does not link one, and
+  # 3.1, backend "mthreads"), set_env_mthreads.sh deliberately does not link one, and
   # stock PyPI triton is not a substitute -- it ships no mthreads backend and
   # cannot compile a MUSA kernel at all. The suite itself is green on the MTT
   # S5000 with that runtime on PYTHONPATH (2026-08-29: 25 passed, 19 skipped, 1
@@ -490,13 +613,13 @@ steps:
   # passed, 21 skipped, 1 failed on the same entry-point case.
   - id: torch_compile
     name: Run torch.compile tests
-    platforms: [cuda, iluvatar]
+    platforms: [nvidia, iluvatar]
     command: >-
       FLAGOS_USE_FLAGTREE=1 python -m pytest tests/integration/test_compile.py
       -v -s --tb=short
   - id: torch_compile
     name: Run torch.compile tests
-    platforms: [gcu, kunlunxin, metax]
+    platforms: [enflame, kunlunxin, metax]
     command: python -m pytest tests/integration/test_compile.py -v --tb=short
 
   # The Qwen3 smoke groups need a mounted checkpoint, which is why they are the
@@ -504,16 +627,24 @@ steps:
   # GCU, Kunlunxin, Iluvatar and MUSA record the gap as a missing model mount
   # rather than a missing test; DCU's inference/training are deferred until its runner
   # has the mount and the first CI run confirms the card count.
+  #
+  # The two are listed platform by platform because they expand $MODEL_PATH and
+  # every listed platform's `integration_environment` must define it
+  # (test_every_command_variable_has_an_environment_supplier). thead used to be
+  # listed on the strength of its own checkpoint mount, which no longer exists:
+  # its `integration_environment` is empty and the group could only fail with
+  # bash's "unbound variable". Restore its `platforms` entry together with the
+  # mount.
   - id: inference
     name: Run inference tests
-    platforms: [cuda, ppu]
+    platforms: [nvidia]
     command: >-
       python -m pytest tests/integration/test_qwen3_infer.py --model "$MODEL_PATH"
       -v -s --tb=short
 
   - id: training
     name: Run training tests
-    platforms: [cuda, ppu]
+    platforms: [nvidia]
     command: >-
       python -m pytest tests/integration/test_qwen3_train.py --model "$MODEL_PATH"
       -v -s --tb=short
@@ -528,12 +659,12 @@ steps:
   # gets wrong, are in the test.
   - id: native_comm_bridge
     name: Native comm bridge
-    platforms: [dcu]
+    platforms: [hygon]
     command: python -m pytest tests/integration/test_comm_native_bridge.py -v -s --tb=short
 
   - id: musa_dispatch
     name: Run MUSA dispatch tests
-    platforms: [musa]
+    platforms: [mthreads]
     command: python -m pytest tests/integration/ops/test_musa_dispatch.py -m musa -v -s --tb=short
 
   # tests/unit is a source-tree suite: seven of its files read scripts/, csrc/,
@@ -545,7 +676,7 @@ steps:
   # the same reading INTEGRATION_ALLOW_TEARDOWN_CRASH asks for above.
   - id: unit_tests_per_file
     name: Run unit tests (per file)
-    platforms: [dcu]
+    platforms: [hygon]
     command: >-
       cd "$GITHUB_WORKSPACE" && UNIT_TESTS_ALLOW_TEARDOWN_CRASH=1
       python .github/scripts/run_unit_tests.py --timeout 300
@@ -578,7 +709,7 @@ steps:
   # environment check asserts the device count.
   - id: backend_ops
     name: Run {{display_name}} backend operator tests
-    platforms: [mps]
+    platforms: [apple]
     command: python -m pytest tests/integration/ops -m mps -v --tb=short
 
   # The second addition is the MPS runtime contract: device and stream lookup,
@@ -587,5 +718,5 @@ steps:
   # Metal and PyTorch's MPS stream code that an operator-only sweep cannot.
   - id: mps_runtime
     name: Run {{display_name}} runtime tests
-    platforms: [mps]
+    platforms: [apple]
     command: python -m pytest tests/integration/test_mps_runtime.py -v --tb=short

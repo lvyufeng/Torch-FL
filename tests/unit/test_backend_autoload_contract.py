@@ -42,8 +42,8 @@ def load_setup(monkeypatch):
     return load
 
 
-def _pyproject_table(table: str) -> dict:
-    """Read one ``[table]`` of pyproject.toml without a TOML parser.
+def _pyproject_entry_points(group: str) -> dict:
+    """One ``[project.entry-points."<group>"]`` table of pyproject.toml.
 
     ``tomllib`` is Python 3.11+, and the accelerator CI interpreters are 3.10:
     DCU and GCU build against the image's cp310 Python, and the DCU unit group
@@ -54,7 +54,7 @@ def _pyproject_table(table: str) -> dict:
     scanned directly instead.
     """
     lines = (ROOT / "pyproject.toml").read_text(encoding="utf-8").splitlines()
-    header = f"[{table}]"
+    header = f'[project.entry-points."{group}"]'
     if header not in lines:
         raise AssertionError(f"pyproject.toml has no {header} table")
     entries = {}
@@ -83,36 +83,45 @@ def _function(name):
     return namespace[name]
 
 
-def test_entry_points_are_resolved_by_the_build(load_setup):
-    """Build selection is where MPS can differ from the device plugins."""
-    assert "entry-points" in _dynamic_fields()
-    _, kwargs = load_setup("cuda")
-    assert kwargs["entry_points"] == {
-        "torch.backends": ["torch_fl = torch_fl._autoload:init"]
+def test_entry_points_are_resolved_by_the_build():
+    """The hook is declared in pyproject.toml, not passed from setup().
+
+    setuptools ignores a table that exists only in setup() as soon as [project]
+    is present (`_MissingDynamic`), so a setup()-side table reaches no wheel.
+    """
+    assert _pyproject_entry_points("torch.backends") == {
+        "torch_fl": "torch_fl._autoload:init"
     }
 
 
-def _dynamic_fields() -> set[str]:
+def test_entry_points_stay_out_of_the_dynamic_list():
+    """A table that is declared dynamic has nothing to be filled from here."""
     lines = (ROOT / "pyproject.toml").read_text(encoding="utf-8").splitlines()
-    for line in lines:
-        key, _, value = line.partition("=")
-        if key.strip() == "dynamic":
-            return {item.strip().strip('"') for item in value.strip(" []").split(",")}
-    raise AssertionError("pyproject.toml has no project.dynamic list")
+    dynamic = next(line for line in lines if line.startswith("dynamic ="))
+    assert "entry-points" not in dynamic
 
 
-@pytest.mark.parametrize("accelerator", ["cuda", "dcu", "musa"])
-def test_privateuse1_wheels_keep_the_torch_backend_autoload(load_setup, accelerator):
+@pytest.mark.parametrize(
+    "accelerator", ["nvidia", "hygon", "mthreads", "iluvatar", "apple"]
+)
+def test_every_build_declares_only_what_a_wheel_can_carry(load_setup, accelerator):
+    """No `scripts=` and no setup()-side table: both are dropped by setuptools.
+
+    The `torch-fl-<platform>` preflight that `scripts=` used to install is a
+    console script, which needs a static name in pyproject.toml; it is not
+    declared, so a wheel installs the tool from `scripts/tools/` instead.
+    """
     _, kwargs = load_setup(accelerator)
-    assert kwargs["entry_points"] == {
-        "torch.backends": ["torch_fl = torch_fl._autoload:init"]
-    }
+    assert "scripts" not in kwargs
+    assert "entry_points" not in kwargs
 
 
-def test_mps_wheel_leaves_bare_torch_on_the_mps_backend(load_setup):
-    """Only an explicit import may claim PrivateUse1 in an MPS installation."""
-    _, kwargs = load_setup("mps")
-    assert kwargs["entry_points"] == {}
+def test_the_packaged_hook_resolves_to_the_autoload_module():
+    """The label the wheel carries names a function that exists."""
+    hook = _pyproject_entry_points("torch.backends")["torch_fl"]
+    module, _, attribute = hook.partition(":")
+    loaded = runpy.run_path(str(ROOT.joinpath(*module.split(".")).with_suffix(".py")))
+    assert callable(loaded[attribute])
 
 
 def test_mps_editable_install_rejects_another_accelerators_egg_info(
@@ -120,7 +129,7 @@ def test_mps_editable_install_rejects_another_accelerators_egg_info(
 ):
     """A stale vendor entry point must not leak into the MPS installation."""
     (tmp_path / "torch_fl.egg-info").mkdir()
-    namespace, kwargs = load_setup("mps")
+    namespace, kwargs = load_setup("apple")
     wheel = SimpleNamespace(
         distribution=SimpleNamespace(get_name=lambda: "torch_fl"),
         _find_egg_info_dir=lambda: "vendor-entry-points",
@@ -165,7 +174,7 @@ def test_unclaimed_or_our_privateuse1_name_is_accepted(current):
     check()
 
 
-@pytest.mark.parametrize("current", ["musa", "other_backend"])
+@pytest.mark.parametrize("current", ["mthreads", "other_backend"])
 def test_foreign_privateuse1_claim_fails_before_native_extension(current):
     check = _function("_check_privateuse1_unclaimed")
     check.__globals__["torch"] = SimpleNamespace(
@@ -179,7 +188,7 @@ def test_foreign_privateuse1_claim_fails_before_native_extension(current):
     assert "TORCH_DEVICE_BACKEND_AUTOLOAD=0" in message
 
 
-@pytest.mark.parametrize("accelerator,expected", [("musa", ["0"]), ("cuda", [])])
+@pytest.mark.parametrize("accelerator,expected", [("mthreads", ["0"]), ("nvidia", [])])
 def test_only_musa_disables_vendor_entry_points_before_torch_import(
     accelerator, expected
 ):

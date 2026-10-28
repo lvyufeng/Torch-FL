@@ -60,7 +60,7 @@ EXTRA_NATIVE = {
     # the raise. See CONV_CPU_CROSSING_PLATFORMS below.
     **{
         platform: {"convolution_overrideable"}
-        for platform in ("cuda", "dcu", "metax", "ppu", "tsingmicro")
+        for platform in ("nvidia", "hygon", "metax", "thead", "tsingmicro")
     },
 }
 EXTRA_ROUTED = {"scaled_dot_product_attention"}
@@ -70,13 +70,13 @@ EXTRA_ROUTED = {"scaled_dot_product_attention"}
 # register.cc:549-614).  Paths are relative to ``csrc/aten``.
 PLATFORM_REGISTRATION = {
     "ascend": ["backends/ascend/generated/ascend_register.inc"],
-    "gcu": [
-        "backends/gcu/generated/gcu_register.inc",
-        "backends/gcu/generated/gcu_flaggems_register.inc",
+    "enflame": [
+        "backends/enflame/generated/gcu_register.inc",
+        "backends/enflame/generated/gcu_flaggems_register.inc",
     ],
-    "musa": [
-        "backends/musa/generated/musa_register.inc",
-        "backends/musa/generated/musa_flaggems_register.inc",
+    "mthreads": [
+        "backends/mthreads/generated/musa_register.inc",
+        "backends/mthreads/generated/musa_flaggems_register.inc",
     ],
     "bpu": [],  # BPU registers no compute ops (register.cc:591-613)
     # Kunlunxin is a native vendor backend like musa/gcu/ascend: it compiles its
@@ -98,17 +98,35 @@ PLATFORM_REGISTRATION = {
         "backends/iluvatar/generated/iluvatar_flaggems_register.inc",
     ],
     # Boxing platforms (cuda, dcu, metax, ppu) and tsingmicro share the
-    # register.cc ``#else`` arm. With boxing ON it includes generated/register.inc
-    # (every generated op); with boxing OFF -- the FlagGems-primary default -- it
-    # includes the matching generated/register_flaggems_<platform>.inc, which
-    # claims only the ops the conf routes to a FlagGems backend. Both are listed
-    # here because a build compiles one or the other.
-    "cuda": ["generated/register.inc", "generated/register_flaggems_cuda.inc"],
-    "dcu": ["generated/register.inc", "generated/register_flaggems_dcu.inc"],
-    "metax": ["generated/register.inc", "generated/register_flaggems_metax.inc"],
-    "ppu": ["generated/register.inc", "generated/register_flaggems_ppu.inc"],
+    # register.cc ``#else`` arm. With boxing ON it includes
+    # generated/register_boxing_<platform>.inc -- every op the conf routes
+    # somewhere other than ``none`` that this wheel has a kernel for; with
+    # boxing OFF -- the FlagGems-primary default -- it includes the matching
+    # generated/register_flaggems_<platform>.inc, which claims only the ops the
+    # conf routes to a FlagGems backend. Both are listed here because a build
+    # compiles one or the other. A boxing build also includes the full
+    # generated/register.inc after the boxed list, so the claimed set of that
+    # arm is the boxed list plus whatever register.inc adds; the checks below
+    # ask that the boxed list is a subset of it, which is what the claim gating
+    # guarantees.
+    "nvidia": [
+        "generated/register_boxing_nvidia.inc",
+        "generated/register_flaggems_nvidia.inc",
+    ],
+    "hygon": [
+        "generated/register_boxing_hygon.inc",
+        "generated/register_flaggems_hygon.inc",
+    ],
+    "metax": [
+        "generated/register_boxing_metax.inc",
+        "generated/register_flaggems_metax.inc",
+    ],
+    "thead": [
+        "generated/register_boxing_thead.inc",
+        "generated/register_flaggems_thead.inc",
+    ],
     "tsingmicro": [
-        "generated/register.inc",
+        "generated/register_boxing_tsingmicro.inc",
         "generated/register_flaggems_tsingmicro.inc",
     ],
     # MPS is a native vendor backend: register.cc's USE_MPS arm includes the
@@ -116,13 +134,13 @@ PLATFORM_REGISTRATION = {
     # kernel (the `unary`, `binary`, `binary_scalar` and `reduce` categories so
     # far).  Note this is a PrivateUse1-dispatched include, not built-in MPS --
     # so the conf routes those ops to ``mps``, and the rest to ``none``.
-    "mps": ["backends/mps/generated/mps_register.inc"],
+    "apple": ["backends/apple/generated/mps_register.inc"],
 }
 
 # CUDA-boxing platforms spell the fallback key ``cuda`` (BOXING_FALLBACK in
 # gen_vendor_confs.py), not the platform name.  Kunlunxin is no longer one of
 # them: it is a native vendor backend, so its route key is ``kunlunxin``.
-BOXING_PLATFORMS = {"cuda", "dcu", "metax", "ppu"}
+BOXING_PLATFORMS = {"nvidia", "hygon", "metax", "thead"}
 
 PLATFORMS = sorted(PLATFORM_REGISTRATION)
 
@@ -142,6 +160,40 @@ def _registered_ops(inc_path: Path) -> set[str]:
     if not inc_path.exists():
         return set()
     return set(re.findall(r'm\.impl\("([^"]+)"', inc_path.read_text()))
+
+
+@pytest.mark.anyplatform
+@pytest.mark.parametrize("platform", sorted(BOXING_PLATFORMS))
+def test_a_boxing_claim_and_the_conf_route_agree_in_both_directions(platform):
+    """The boxed list is the conf's route set, not a superset or a subset.
+
+    register.cc's boxing arm claims exactly ``register_boxing_<platform>.inc``.
+    A claim with no route is "routed to 'none' ... but the op is registered on
+    PrivateUse1", and a route with no claim -- an op the conf routes to
+    ``boxing`` that nothing registered -- is "backend not registered" the first
+    time a model calls it. Both directions are measured failures on DCU: mm
+    after the arm stopped claiming unlisted wrappers (run 40156011560), and
+    `empty_like` the other way round before the boxed list existed.
+    """
+    boxed = _registered_ops(GEN_DIR / f"register_boxing_{platform}.inc")
+    routes = _parse_conf(CONF_DIR / f"backends_{platform}.conf")
+    assert boxed, f"{platform} claims no boxed op"
+    left_at_none = sorted(op for op in boxed if routes.get(op) == "none")
+    assert not left_at_none, (
+        f"{platform} claims ops its conf routes to none: {left_at_none[:10]}"
+    )
+    unlisted = sorted(op for op in boxed if op not in routes)
+    assert not unlisted, (
+        f"{platform} claims ops its conf does not list: {unlisted[:10]}"
+    )
+    routed_to_boxes = sorted(
+        op for op, value in routes.items() if value.split("#")[0].strip() == "boxing"
+    )
+    unclaimed = sorted(set(routed_to_boxes) - boxed)
+    assert not unclaimed, (
+        f"{platform} routes {len(unclaimed)} op(s) to boxing that its boxed list "
+        f"does not claim: {unclaimed[:10]}"
+    )
 
 
 def _platform_registered(platform: str) -> set[str]:
@@ -177,22 +229,22 @@ def test_full_coverage_confs_share_one_op_set():
     in each header are commensurable.  The confs that get the full-coverage
     treatment are the native vendor confs (ascend, gcu, kunlunxin, musa), the
     # FlagGems-primary conf (iluvatar) and the CUDA-boxing confs (dcu, metax,
-    # ppu).  ``backends_cuda.conf`` is the *base*
+    # ppu).  ``backends_nvidia.conf`` is the *base*
     list (the one ``codegen_ops.py`` rewrites) and therefore lacks the three
     widened ops; ``backends_bpu.conf`` is empty and ``backends_tsingmicro.conf``
     is hand-written and sparse.  Those three are asserted separately.
     """
     full_coverage = {
         "ascend",
-        "gcu",
+        "enflame",
         "kunlunxin",
-        "musa",
-        "dcu",
+        "mthreads",
+        "hygon",
         "metax",
-        "ppu",
+        "thead",
         "iluvatar",
     }
-    reference = _parse_conf(CONF_DIR / "backends_musa.conf")
+    reference = _parse_conf(CONF_DIR / "backends_mthreads.conf")
     for platform in sorted(full_coverage):
         routes = _parse_conf(CONF_DIR / f"backends_{platform}.conf")
         assert set(routes) == set(reference), (
@@ -204,13 +256,13 @@ def test_full_coverage_confs_share_one_op_set():
 
 @pytest.mark.anyplatform
 def test_cuda_conf_is_the_generated_base_list():
-    """``backends_cuda.conf`` is rewritten by ``codegen_ops.py`` and therefore
+    """``backends_nvidia.conf`` is rewritten by ``codegen_ops.py`` and therefore
     covers exactly the generated op list, without the widened vendor-only ops.
     """
-    routes = _parse_conf(CONF_DIR / "backends_cuda.conf")
+    routes = _parse_conf(CONF_DIR / "backends_nvidia.conf")
     widened = EXTRA_NATIVE["ascend"] | EXTRA_ROUTED
     assert not (set(routes) & widened), (
-        f"backends_cuda.conf should not list the widened vendor-only ops "
+        f"backends_nvidia.conf should not list the widened vendor-only ops "
         f"{sorted(widened)}; it is the generated base list"
     )
 
@@ -226,7 +278,9 @@ def test_every_route_uses_an_allowed_backend_key(platform):
     ``Backend`` enum value at runtime.
     """
     routes = _parse_conf(CONF_DIR / f"backends_{platform}.conf")
-    vendor_key = "cuda" if platform in BOXING_PLATFORMS else platform
+    # A conf's route key is the vendor whose kernels serve it -- `nvidia` for
+    # the CUDA boxing kernel, like every other vendor key.
+    vendor_key = platform
     allowed = {
         "flaggems_cpp",
         "flaggems",
@@ -253,7 +307,7 @@ def test_every_route_uses_an_allowed_backend_key(platform):
 
 @pytest.mark.anyplatform
 @pytest.mark.parametrize(
-    "platform", ["musa", "gcu", "ascend", "kunlunxin", "iluvatar", "mps"]
+    "platform", ["mthreads", "enflame", "ascend", "kunlunxin", "iluvatar", "apple"]
 )
 def test_vendor_routes_are_registered(platform):
     """Every op routed to ``<vendor>`` must be in the platform's registration set.
@@ -276,7 +330,7 @@ def test_vendor_routes_are_registered(platform):
 
 @pytest.mark.anyplatform
 @pytest.mark.parametrize(
-    "platform", ["musa", "gcu", "ascend", "kunlunxin", "iluvatar", "mps"]
+    "platform", ["mthreads", "enflame", "ascend", "kunlunxin", "iluvatar", "apple"]
 )
 def test_accelerated_routes_are_registered(platform):
     """Every non-``none`` route must be an op the platform registers.
@@ -299,7 +353,7 @@ def test_accelerated_routes_are_registered(platform):
 
 @pytest.mark.anyplatform
 @pytest.mark.parametrize(
-    "platform", ["musa", "gcu", "ascend", "kunlunxin", "iluvatar", "mps"]
+    "platform", ["mthreads", "enflame", "ascend", "kunlunxin", "iluvatar", "apple"]
 )
 def test_registered_ops_are_never_left_at_none(platform):
     """A registered op left at ``none`` sends a real kernel to ``cpu_fallback``.
@@ -328,10 +382,12 @@ def test_registered_ops_are_never_left_at_none(platform):
 @pytest.mark.anyplatform
 @pytest.mark.parametrize("platform", sorted(BOXING_PLATFORMS))
 def test_boxing_platforms_have_no_none_entries(platform):
-    """A CUDA-compatible platform claims the full generated op list, so every
-    op has a boxing kernel behind it and ``none`` is never the right answer.
+    """The day-0 boxing variant boxes what it cannot accelerate, so ``none`` is
+    never the right answer there -- that is what makes it a day-0 file. The
+    default conf for the same platform is ``none``-based; see
+    test_gen_vendor_confs.test_default_confs_never_route_boxing.
     """
-    routes = _parse_conf(CONF_DIR / f"backends_{platform}.conf")
+    routes = _parse_conf(CONF_DIR / f"backends_{platform}_boxing.conf")
     none_ops = [op for op, v in routes.items() if v.split("#", 1)[0].strip() == "none"]
     assert not none_ops, f"{platform} routes {none_ops[:5]} to none"
 
@@ -350,15 +406,15 @@ def test_bpu_conf_is_empty():
 
 @pytest.mark.anyplatform
 def test_mps_conf_is_a_generated_full_coverage_conf():
-    """``backends_mps.conf`` is a generated full-coverage conf like the vendor
+    """``backends_apple.conf`` is a generated full-coverage conf like the vendor
     backends: it lists every routable op exactly once, routing only the
     MPSGraph-kernel cohort to ``mps`` and the rest to ``none``.  See
     docs/superpowers/specs/2026-10-14-apple-mps-native-backend-design.md.
     """
-    routes = _parse_conf(CONF_DIR / "backends_mps.conf")
-    assert routes, "backends_mps.conf lists no routes"
-    assert set(routes.values()) <= {"mps", "none"}, (
-        "backends_mps.conf may only route ops to 'mps' or 'none'"
+    routes = _parse_conf(CONF_DIR / "backends_apple.conf")
+    assert routes, "backends_apple.conf lists no routes"
+    assert set(routes.values()) <= {"apple", "none"}, (
+        "backends_apple.conf may only route ops to 'mps' or 'none'"
     )
     # One op per MPSGraph category the codegen emits (unary, binary,
     # binary_scalar, reduce, gemm, softmax, pow_scalar, conv). A category whose
@@ -396,15 +452,18 @@ def test_mps_conf_is_a_generated_full_coverage_conf():
         "div.Scalar",
         "reciprocal",
         "native_layer_norm",
-        "sin",
-        "cos",
-        "eq.Scalar",
-        "le.Tensor",
-        "ne.Scalar",
+        "softplus",
+        "transpose.int",
+        "slice.Tensor",
+        "unsqueeze",
+        "t",
+        "select.int",
+        "squeeze.dim",
+        "_unsafe_view",
         "cat",
         "where.self",
     ):
-        assert routes.get(op) == "mps", f"the {op} kernel must be routed to mps"
+        assert routes.get(op) == "apple", f"the {op} kernel must be routed to mps"
 
 
 @pytest.mark.anyplatform
@@ -465,27 +524,36 @@ def test_conf_route_counts_are_stable():
         # copy_func kernel the FlagGems `_ascend` flip override builds.
         "ascend": {"flaggems": 221, "none": 1659, "ascend": 157},
         "bpu": {},
-        # 24 ops moved from flaggems to cuda: the conf writer now excludes
-        # flaggems_recursive_fallback | flaggems_runtime_broken, which it could
-        # not see before the sets were moved above the emitter. On a boxing-off
-        # wheel -- the default -- GetFn(kCuda) degrades to the FlagGems Python
-        # path, so this is a no-op there; on a FLAGOS_BUILD_BOXING=ON wheel the
-        # ops now reach their boxing kernel instead of the FlagGems route.
-        "cuda": {"flaggems": 392, "cuda": 1642},
-        "dcu": {"flaggems": 454, "cuda": 1583},
+        # Measured on H100 after rebasing onto the main that carries #340.
+        # #340 added three exception groups (cuda_route_exceptions for
+        # contract/compile defects, measured_flaggems_rollback for ops that
+        # failed a surveyed case, metadata_route_overrides for ops that buy no
+        # kernel on either route) and moved cuda to 390/1644. This branch adds
+        # the other half: the FlagGems ceiling is now derived from the generated
+        # kernels instead of being hand-maintained, so ops that had a kFlagGems
+        # kernel but were never listed -- mul.Tensor above all, 1522 host round
+        # trips per forward on the OCR-RM value head -- reach the FlagGems route
+        # instead of cpu_fallback. Both effects apply: 549/1485.
+        "nvidia": {"flaggems": 549, "nvidia": 1485},
+        # dcu/metax/ppu are CUDA-ABI platforms with no vendor kernel of their
+        # own on this tree, and a default conf never routes boxing (AGENTS.md,
+        # "Day-0 boxing confs"): what FlagGems does not cover -- including each
+        # platform's measured triton gaps -- is `none` (cpu_fallback). The
+        # boxing routes live in backends_<platform>_boxing.conf.
+        "hygon": {"flaggems": 454, "none": 1583},
         # embedding and embedding.out gained a native topsaten kernel and now
         # route to gcu instead of falling through to none; see
         # NATIVE_TRITON_GAPS in scripts/codegen/gen_vendor_confs.py.
         #
         # cat is the exception to the cat-flaggems reroute: the FlagGems route
-        # does not compile on this vendor, so NATIVE_TRITON_GAPS["gcu"] keeps it
+        # does not compile on this vendor, so NATIVE_TRITON_GAPS["enflame"] keeps it
         # on the gcu kernel. See the entry in scripts/codegen/gen_vendor_confs.py.
         #
         # rsub.Scalar / rsub.Tensor moved flaggems -> gcu: FlagGems' rsub Triton
         # kernel is rejected by the Enflame front end (64-bit data type not
         # supported on GCU300), so they are served by the native topsaten kernel
-        # instead. See NATIVE_TRITON_GAPS["gcu"].
-        "gcu": {"none": 1603, "gcu": 183, "flaggems": 251},
+        # instead. See NATIVE_TRITON_GAPS["enflame"].
+        "enflame": {"none": 1603, "enflame": 183, "flaggems": 251},
         # kunlunxin is a native vendor backend: every op routes to the vendor
         # XPU SDK (``kunlunxin``) or is left at ``none`` -- there is no ``cuda``
         # route.  The count is exactly what
@@ -497,10 +565,26 @@ def test_conf_route_counts_are_stable():
         # cannot steer -- the two failures the CI lane reported.
         "kunlunxin": {"kunlunxin": 57, "none": 1980},
         # metax: _softmax/embedding moved off flaggems_cpp to flaggems (#501).
-        "metax": {"flaggems": 594, "cuda": 1433, "flaggems_cpp": 10},
+        # 8 ops moved flaggems -> boxing (594 -> 586 / 1433 -> 1441) because
+        # route_boxing now consults codegen_ops.py's FlagGems holds. These were
+        # ops the metax conf routed to the Python path while
+        # flaggems_runtime_broken listed them as broken -- a route the hold list
+        # has always said not to take, which the generator could not see until
+        # the sets moved to module scope. They are the `out=`-contract group
+        # (_softmax.out, _log_softmax.out and their backward_data forms),
+        # _cdist_backward (gems asserts a real CUDA tensor), and
+        # _native_batch_norm_legit_functional.
+        #
+        # NOT REVALIDATED on MetaX hardware: the re-route is the hold list's
+        # doing, applied uniformly, and was measured only on H100. MetaX needs
+        # the differential survey run before this row can claim that moving
+        # these 8 ops to `cuda` costs nothing there. If it does cost something,
+        # the per-platform answer is NATIVE_TRITON_GAPS["metax"], not a
+        # deletion from the shared holds.
+        "metax": {"flaggems": 586, "none": 1436, "flaggems_cpp": 15},
         # cat moved to flaggems via the tensorlist_dim codegen category (#498).
-        "musa": {"flaggems": 466, "none": 1518, "musa": 53},
-        "ppu": {"flaggems": 592, "cuda": 1445},
+        "mthreads": {"flaggems": 466, "none": 1518, "mthreads": 53},
+        "thead": {"flaggems": 592, "none": 1445},
         # Iluvatar adds a native, non-boxing vendor slot on top of FlagGems
         # (scripts/codegen/codegen_iluvatar.py). Its counts are DERIVED, not
         # pinned: the native cohort is a moving measurement -- the first landing
@@ -521,14 +605,16 @@ def test_conf_route_counts_are_stable():
         # ``reciprocal``, ``take``, ``layer_norm``, ``batch_norm``, ``sigmoid``,
         # ``exp``, ``log``, ``rsqrt``, ``sqrt``, ``tanh``, ``erf``, ``where``
         # ``cat``, ``masked_fill``, ``all``, ``argmax``, ``triu`` and
-        # ``SOLVE_TRIANGULAR``, ``index`` and ``cumsum`` categories (45 ops so
-        # far), so the conf routes those to
+        # ``SOLVE_TRIANGULAR``, ``index``, ``cumsum``, ``softplus``, the
+        # trigonometric and predicate spellings, the vision interpolation
+        # factories, clamp, GELU, rsub.Scalar and the eight metadata views
+        # (66 ops so far), so the conf routes those to
         # ``mps`` and every other op to ``none``. The ``softmax`` category is registered
         # under ``_softmax`` alone because ``softmax.int`` is
         # CompositeImplicitAutograd and never reaches a backend key, and the
         # ``conv`` category under ``convolution_overrideable`` alone for the same
         # reason about ``aten.convolution``; see scripts/codegen/codegen_mps.py.
-        "mps": {"mps": 51, "none": 1986},
+        "apple": {"apple": 66, "none": 1971},
         # Twelve ops that cpu_fallbacked in the Qwen-Image-2.1 census moved to
         # flaggems (all.dim, clamp_min, div.Tensor, gelu, gt.Scalar, gt.Tensor,
         # index_select, isneginf, nonzero, tanh, tril, zero_); 51 -> 63, then
@@ -561,14 +647,14 @@ def test_conf_route_counts_are_stable():
 # forward, and claiming it again would duplicate an m.impl in the same
 # TORCH_LIBRARY_IMPL body -- a compile error).
 CONV_CPU_CROSSING = {
-    "cuda": {"convolution_overrideable", "convolution_backward_overrideable"},
-    "dcu": {"convolution_overrideable", "convolution_backward_overrideable"},
+    "nvidia": {"convolution_overrideable", "convolution_backward_overrideable"},
+    "hygon": {"convolution_overrideable", "convolution_backward_overrideable"},
     "tsingmicro": {
         "convolution_overrideable",
         "convolution_backward_overrideable",
     },
     "metax": {"convolution_backward_overrideable"},
-    "ppu": {"convolution_backward_overrideable"},
+    "thead": {"convolution_backward_overrideable"},
 }
 
 
@@ -606,10 +692,10 @@ def test_conv_claim_is_reachable_from_the_platform_arm(platform):
     """
     register_cc = (ATEN_DIR / "register.cc").read_text()
     expected = {
-        "cuda": "FLAGOS_ACCEL_CUDA",
-        "dcu": "FLAGOS_ACCEL_DCU",
+        "nvidia": "FLAGOS_ACCEL_CUDA",
+        "hygon": "FLAGOS_ACCEL_DCU",
         "metax": "FLAGOS_ACCEL_METAX",
-        "ppu": "FLAGOS_ACCEL_PPU",
+        "thead": "FLAGOS_ACCEL_PPU",
         "tsingmicro": "FLAGOS_ACCEL_TSINGMICRO",
     }[platform]
 
@@ -620,7 +706,7 @@ def test_conv_claim_is_reachable_from_the_platform_arm(platform):
     # metax/ppu claim the backward only, so anchor on that for them.
     op = (
         "convolution_backward_overrideable"
-        if platform in ("metax", "ppu")
+        if platform in ("metax", "thead")
         else "convolution_overrideable"
     )
     # Match on the op name only: the backward claim is wrapped across two
@@ -636,7 +722,7 @@ def test_conv_claim_is_reachable_from_the_platform_arm(platform):
 
 
 @pytest.mark.anyplatform
-@pytest.mark.parametrize("platform", ["metax", "ppu"])
+@pytest.mark.parametrize("platform", ["metax", "thead"])
 def test_flaggems_list_already_covers_the_forward_on_metax_and_ppu(platform):
     """These two must NOT claim the forward twice.
 

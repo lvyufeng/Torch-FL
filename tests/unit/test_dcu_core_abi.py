@@ -32,9 +32,9 @@ import textwrap
 import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-SCRIPT = REPO_ROOT / "scripts" / "vendor" / "check_dcu_core_abi.py"
+SCRIPT = REPO_ROOT / "scripts" / "vendor" / "check_hygon_core_abi.py"
 
-_spec = importlib.util.spec_from_file_location("check_dcu_core_abi", SCRIPT)
+_spec = importlib.util.spec_from_file_location("check_hygon_core_abi", SCRIPT)
 abi = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(abi)
 
@@ -246,10 +246,10 @@ def test_shipped_manifest_covers_both_symbol_families():
     not the other is only caught at bundle time on a DTK machine otherwise.
     """
     manifest = abi.read_manifest(
-        REPO_ROOT / "torch_fl" / "accelerator" / "dcu" / "dtk_core_compat_symbols.txt"
+        REPO_ROOT / "torch_fl" / "accelerator" / "hygon" / "dtk_core_compat_symbols.txt"
     )
     source = (
-        REPO_ROOT / "csrc" / "runtime" / "accelerator" / "dcu" / "dtk_core_compat.cc"
+        REPO_ROOT / "csrc" / "runtime" / "accelerator" / "hygon" / "dtk_core_compat.cc"
     ).read_text(encoding="utf-8")
 
     missing = sorted(sym for sym in manifest if sym not in source)

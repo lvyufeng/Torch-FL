@@ -52,13 +52,13 @@ which adds 32 entries to the fp32-cast policy macro lists:
   every DTK-added entry becomes an `at::_ops::<op>::call` reference. The plugin is
   compiled against DTK's patched headers, so it inherits them.
 
-Full symbol list: `torch_fl/accelerator/dcu/dtk_core_compat_symbols.txt`.
+Full symbol list: `torch_fl/accelerator/hygon/dtk_core_compat_symbols.txt`.
 
 ## How the decoupled mode works
 
 ### 1. A 32-symbol compatibility shim
 
-`csrc/runtime/accelerator/dcu/dtk_core_compat.cc` defines all 32 symbols. Each is
+`csrc/runtime/accelerator/hygon/dtk_core_compat.cc` defines all 32 symbols. Each is
 a C function aliased to the C++ mangled name:
 
 ```cpp
@@ -72,11 +72,11 @@ codegen, because the DTK-only schemas do not exist on other platforms. The shim
 therefore satisfies the loader without pretending the ops work.
 
 It builds as `libflagos_dtk_core_compat.so` (~16 KB) and installs into
-`torch_fl/lib_dcu/`.
+`torch_fl/lib_hygon/`.
 
 ### 2. A build-time ABI guard
 
-`scripts/vendor/check_dcu_core_abi.py` recomputes the gap from the binaries rather than
+`scripts/vendor/check_hygon_core_abi.py` recomputes the gap from the binaries rather than
 trusting the checked-in list. It reports
 
 ```text
@@ -90,7 +90,7 @@ by the shim. The manifest is deliberately a compatibility superset: its 16
 its 16 `fuse_*` symbols are imported by `libtorch_fl.so` only when the plugin was
 compiled against DTK's patched headers. CI compiles the plugin against official
 headers, so that valid build has a 16-symbol gap rather than 32.
-`scripts/vendor/bundle_dcu_libtorch.sh` runs the guard on every decoupled bundle, so a DTK
+`scripts/vendor/bundle_hygon_libtorch.sh` runs the guard on every decoupled bundle, so a DTK
 release that adds a fused op fails the build with the new symbol
 named, instead of failing at `import torch_fl` with a mangled undefined symbol.
 The guard needs the vendor core's *exports*, so it is pointed at DTK's own
@@ -101,12 +101,12 @@ and asserts the shipped manifest still matches the shim source (16 + 16).
 
 ### 3. Preload instead of relink
 
-`torch_fl/accelerator/dcu/_dcu_libtorch_link.py` dlopens, in order, before
+`torch_fl/accelerator/hygon/_dcu_libtorch_link.py` dlopens, in order, before
 `import torch`:
 
 ```text
 official torch/lib:  libc10.so  libtorch_cpu.so  libtorch.so
-bundled lib_dcu:     libflagos_dtk_core_compat.so  libcaffe2_nvrtc.so
+bundled lib_hygon:     libflagos_dtk_core_compat.so  libcaffe2_nvrtc.so
                      libc10_hip.so  libmagma.so  libtorch_hip.so
 ```
 
@@ -145,7 +145,7 @@ hash-suffixed deps did not exist. Measured on the CI image: `libtorch.so` -> `li
 OSError: libmkl_gf_lp64-e350bb11.so: cannot open shared object file
 ```
 
-even though that MKL library sits in `lib_dcu` right next to `libmagma.so`. The
+even though that MKL library sits in `lib_hygon` right next to `libmagma.so`. The
 current facade exposes every bundled dependency beside `libmagma.so`, and the
 preload list opens vendor libraries from the bundle path, `libmagma.so` included,
 ahead of `libtorch.so`.
@@ -170,7 +170,7 @@ device exists does:
   `Event(enable_timing=True)` — so making `is_available()` True without this makes
   each autotuning FlagGems op fail one step later, inside `do_bench`.
 
-`patch_torch_cuda_for_dcu()` in `torch_fl/accelerator/dcu/_dcu_compat.py` answers
+`patch_torch_cuda_for_dcu()` in `torch_fl/accelerator/hygon/_dcu_compat.py` answers
 those from the flagos runtime and the HIP driver instead, mirroring the existing
 MetaX shim. Device properties are read through `libgalaxyhip.so.5` by attribute
 **id** (layout-independent), except `gcnArchName`, which is scraped from the
@@ -196,7 +196,7 @@ copied into the bundle: it is pure Python generated at build time, so swapping
 
 ### 5. A post-import runtime check
 
-`torch_fl/accelerator/dcu/_dcu_runtime_check.py` runs right after `import torch`:
+`torch_fl/accelerator/hygon/_dcu_runtime_check.py` runs right after `import torch`:
 
 1. **Base version alignment.** A mismatched official wheel is an ABI mismatch that
    `dlopen` does *not* reject, because the symbols it needs exist with the same
@@ -278,15 +278,15 @@ vendor_core_mode True   add err 0.0   mm err 2.86e-06
 
 ```bash
 # Default: device libs only, on the official torch wheel.
-bash scripts/vendor/bundle_dcu_libtorch.sh
+bash scripts/vendor/bundle_hygon_libtorch.sh
 
 # Fallback: DTK's full core set, selected through a private torch facade.
-FLAGOS_DCU_VENDOR_CORE=1 bash scripts/vendor/bundle_dcu_libtorch.sh
+FLAGOS_DCU_VENDOR_CORE=1 bash scripts/vendor/bundle_hygon_libtorch.sh
 ```
 
 The env var must match at build time and at import time; a mismatch is rejected
 with the command needed to fix it rather than a missing-`libc10.so` error. CI
-exercises both: `.github/scripts/set_env_dcu.sh` runs the decoupled wheel
+exercises both: `.github/scripts/set_env_hygon.sh` runs the decoupled wheel
 invariants and an import/compute gate, then smoke-tests the legacy path and
 restores the decoupled bundle.
 

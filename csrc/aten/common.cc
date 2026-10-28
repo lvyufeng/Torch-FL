@@ -41,19 +41,19 @@ std::string DefaultConfigPath() {
 #if defined(USE_TSINGMICRO)
       platform = "tsingmicro";
 #elif defined(USE_GCU)
-      platform = "gcu";
+      platform = "enflame";
 #elif defined(USE_KUNLUNXIN)
       platform = "kunlunxin";
 #elif defined(USE_ASCEND)
       platform = "ascend";
 #elif defined(USE_MUSA)
-      platform = "musa";
+      platform = "mthreads";
 #elif defined(USE_BPU)
       platform = "bpu";
 #elif defined(USE_ILUVATAR)
       platform = "iluvatar";
 #elif defined(USE_MPS)
-      platform = "mps";
+      platform = "apple";
 #endif
       if (platform) {
         // dir is <prefix>/torch_fl/lib, configs are at <prefix>/torch_fl/configs/
@@ -63,21 +63,26 @@ std::string DefaultConfigPath() {
         if (test.is_open()) return candidate;
       }
 
-      // No platform-specific conf (cuda/metax/dcu/ppu): the CUDA conf is the
-      // base list those builds inherit. Python normally sets the path via
-      // SetBackendConfigPath(); this is only the last-resort default.
-      std::string candidate = dir + "/../configs/backends_cuda.conf";
+      // No platform-specific conf (metax, or a CUDA-ABI vendor whose conf was
+      // not found): the nvidia conf is the base list those builds inherit.
+      // Python normally sets the path via SetBackendConfigPath(); this is only
+      // the last-resort default.
+      //
+      // A conf is named after the build's vendor (see cmake/flagos_platforms.json);
+      // only platforms that compile a vendor op library have one, which is why
+      // this arm names the ones with a USE_* macro.
+      std::string candidate = dir + "/../configs/backends_nvidia.conf";
       std::ifstream test(candidate);
       if (test.is_open()) return candidate;
-      // Try: <dir>/configs/backends_cuda.conf
-      candidate = dir + "/configs/backends_cuda.conf";
+      // Try: <dir>/configs/backends_nvidia.conf
+      candidate = dir + "/configs/backends_nvidia.conf";
       test.open(candidate);
       if (test.is_open()) return candidate;
     }
   }
 #endif
   // Fallback to build-time path
-  return FLAGOS_SOURCE_ROOT "/torch_fl/configs/backends_cuda.conf";
+  return FLAGOS_SOURCE_ROOT "/torch_fl/configs/backends_nvidia.conf";
 }
 
 std::string TrimStr(std::string s) {
@@ -105,26 +110,42 @@ std::string LowerStr(std::string s) {
 // out-of-tree conf or a pinned script keeps working.
 bool ParseBackendName(const std::string& raw, Backend* out) {
   const std::string val = LowerStr(raw);
-  if (val == "cuda") {
-    *out = Backend::kCuda;
+  if (val == "boxing" || val == "nvidia") {
+    // `nvidia` is the key the generator emits for the NVIDIA kernel set: on a
+    // CUDA wheel the boxing kernels are that vendor's own kernels, routed
+    // through kBoxing. Without this arm the conf is read as an unknown backend
+    // for every op it routes that way, and they silently take FlagGems.
+    *out = Backend::kBoxing;
+  } else if (val == "cuda") {
+    // Legacy spelling: the boxing kernel used to be named for the CUDA runtime
+    // it borrows. Still accepted so an older conf or FLAGOS_OP_override keeps
+    // working; BackendName() reports the canonical "boxing".
+    *out = Backend::kBoxing;
   } else if (val == "metax") {
     *out = Backend::kMetax;
+  } else if (val == "hygon" || val == "thead") {
+    // This CUDA-ABI vendor's kernel slot was retired with the mxcc backend, so
+    // there is no Backend for it. Before the vendor rename a conf could not name
+    // it either; the two spellings are accepted only so an out-of-tree conf (or a
+    // FLAGOS_OP_* override written earlier) does not fail to parse. They resolve
+    // to kNone, the same answer the tree used to give the op.
+    *out = Backend::kNone;
   } else if (val == "tsingmicro") {
     *out = Backend::kTsingMicro;
-  } else if (val == "gcu") {
-    *out = Backend::kGcu;
+  } else if (val == "enflame" || val == "gcu") {  // gcu: the SDK-era spelling
+    *out = Backend::kEnflame;
   } else if (val == "kunlunxin") {
     *out = Backend::kKunlunxin;
   } else if (val == "iluvatar") {
     *out = Backend::kIluvatar;
   } else if (val == "ascend") {
     *out = Backend::kAscend;
-  } else if (val == "musa") {
-    *out = Backend::kMusa;
+  } else if (val == "mthreads" || val == "musa") {  // musa: the SDK-era spelling
+    *out = Backend::kMthreads;
   } else if (val == "tileops") {
     *out = Backend::kTileOps;
-  } else if (val == "mps") {
-    *out = Backend::kMps;
+  } else if (val == "apple" || val == "mps") {  // mps: the SDK-era spelling
+    *out = Backend::kApple;
   } else if (val == "flaggems_cpp" || val == "flagos") {
     *out = Backend::kFlagGemsCpp;
   } else if (val == "flaggems" || val == "flaggems_python" ||
@@ -140,18 +161,18 @@ bool ParseBackendName(const std::string& raw, Backend* out) {
 
 const char* BackendName(Backend b) {
   switch (b) {
-    case Backend::kCuda:         return "cuda";
+    case Backend::kBoxing:       return "boxing";
     case Backend::kFlagGemsCpp:  return "flaggems_cpp";
     case Backend::kFlagGems:     return "flaggems";
     case Backend::kAscend:       return "ascend";
-    case Backend::kMusa:         return "musa";
+    case Backend::kMthreads:     return "mthreads";
     case Backend::kMetax:        return "metax";
     case Backend::kTsingMicro:   return "tsingmicro";
-    case Backend::kGcu:          return "gcu";
+    case Backend::kEnflame:      return "enflame";
     case Backend::kKunlunxin:    return "kunlunxin";
     case Backend::kIluvatar:     return "iluvatar";
     case Backend::kTileOps:      return "tileops";
-    case Backend::kMps:          return "mps";
+    case Backend::kApple:        return "apple";
     case Backend::kNone:         return "none";
     default:                     return "unknown";
   }
@@ -379,6 +400,27 @@ std::unordered_map<std::string, Backend> LoadBackendConfig() {
 
   std::string path = ResolveBackendConfigPath();
 
+  // A conf that will not open is fatal, because the failure is otherwise
+  // indistinguishable from a working configuration. ParseConfigInto leaves the
+  // table empty, and an empty table makes GetBackendForOp answer
+  // Backend::kFlagGems for every op -- so one stderr line is all that separates
+  // a typo from a run where the whole workload takes the slowest route. Measured
+  // on A100: FLAGOS_BACKEND_CONFIG=/nonexistent/nope.conf sends every dispatch
+  // to flagos_python, including the ~1600 ops the conf routes to CUDA boxing,
+  // and it also silences the Python-side FlagGems setup that reads this same
+  // file (_conf_routes_to_flaggems in torch_fl/__init__.py).
+  //
+  // Only the top-level file is fatal. A missing `include` inside a conf still
+  // warns and continues: the generated confs state every op directly and need
+  // no include, so that path is legacy, and a failed include drops fewer routes
+  // than the file the caller named.
+  {
+    std::ifstream probe(path);
+    TORCH_CHECK(probe.good(), "flagos: cannot open backend config '", path,
+                "'. Unset FLAGOS_BACKEND_CONFIG to let torch_fl select the conf "
+                "for this build, or point it at a file that exists.");
+  }
+
   std::unordered_map<std::string, Backend> alt;
   ParseConfigInto(path, table, alt);
   ApplyForcedBackend(table, alt);
@@ -483,6 +525,16 @@ bool LogEnabled(const char* item) {
 Backend GetBackendForOp(const std::string& op_name) {
   const auto& table = BackendTable();
   auto it = table.find(op_name);
+  // kFlagGems is the answer for an op the conf does not mention. In a healthy
+  // process that never happens: registration and routing are both generated from
+  // the same conf, so an op absent from the table has no m.impl either and the
+  // call reaches cpu_fallback without ever arriving here. Reaching this line
+  // therefore means the running conf and the compiled registration disagree --
+  // most often because FLAGOS_BACKEND_CONFIG named a file other than the one the
+  // build was generated from. FlagGems is the deliberate choice for that case
+  // (it is the broadest route, so the op usually still runs), and
+  // LoadBackendConfig above makes the one disagreement it can detect -- an
+  // unreadable file -- fatal instead of silent.
   return it != table.end() ? it->second : Backend::kFlagGems;
 }
 
@@ -504,7 +556,7 @@ bool FlagGemsRejectsDtype(at::ScalarType dtype) {
   return dtype == at::kComplexFloat || dtype == at::kComplexDouble;
 #elif defined(FLAGOS_ACCEL_DCU)
   // Same gap, same shape as MetaX, and measured separately in the shipped DCU
-  // environment (torch 2.10.0+dtk2604, HIP 6.3.26113, DTK, `backends_dcu.conf`,
+  // environment (torch 2.10.0+dtk2604, HIP 6.3.26113, DTK, `backends_hygon.conf`,
   // boxing ON). The released wheel predates this change, so it reproduces the
   // two defects below; the fix was measured on a libtorch_fl.so rebuilt from
   // this source and copied into that same environment.
@@ -531,7 +583,7 @@ bool FlagGemsRejectsDtype(at::ScalarType dtype) {
   // the last one because OnesKernelCuda and ZeroKernelCuda are compositional
   // (`at::empty(...).fill_(1)` / `.zero_()`), and the inner in-place call is
   // itself diverted -- `fill_` and `zero_` are registered on the FlagGems
-  // route and the DCU codegen has a kCuda kernel for each. The escape is
+  // route and the DCU codegen has a kBoxing kernel for each. The escape is
   // dtype-scoped, so the same op over float is untouched: measured
   // `ones(float32)` still logs `ones -> flagos_python`.
   //

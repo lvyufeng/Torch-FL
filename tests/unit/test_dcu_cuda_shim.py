@@ -31,7 +31,7 @@ import torch
 from dcu_module_loader import load_module
 
 _dcu_compat = load_module(
-    "torch_fl/accelerator/dcu/_dcu_compat.py", "_flagos_test_dcu_compat"
+    "torch_fl/accelerator/hygon/_dcu_compat.py", "_flagos_test_dcu_compat"
 )
 
 _PATCHED_ATTRS = (
@@ -672,7 +672,7 @@ def test_boxed_provider_installs_one_consistent_facade(shim, monkeypatch):
     ):
         setattr(provider, name, lambda *args, **kwargs: None)
     provider.current_stream = lambda idx=0: types.SimpleNamespace(cuda_stream=900 + idx)
-    package = types.ModuleType("torch_fl.accelerator.dcu")
+    package = types.ModuleType("torch_fl.accelerator.hygon")
     package.dcu_stream = provider
     monkeypatch.setitem(sys.modules, package.__name__, package)
     shim.flagos._C = types.SimpleNamespace(_dcu_stream_info=lambda: None)

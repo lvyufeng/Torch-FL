@@ -32,12 +32,14 @@ CUDA runtime, so constructing the class directly would test the host rather than
 the dispatch. Nothing here needs a MUSA device or the extension's real bindings.
 """
 
+import importlib.util
 import sys
 import types
 
 import pytest
-import torch
 
+import torch_fl
+import torch
 from torch_fl import flagos
 
 _ASCEND_STREAM_MODULE = "torch_fl.accelerator.ascend.acl_stream"
@@ -46,22 +48,41 @@ _HANDLE = 0x7F0000001234
 
 @pytest.fixture
 def vendor(monkeypatch):
-    """Select the platform and stub the C bindings the dispatch reads."""
+    """Load the compatibility facade without a host DCU provider already bound.
+
+    A boxing-ON DCU wheel replaces the public API at import time. Patching
+    ``_platform`` afterwards cannot turn that DcuStream back into the generic
+    compatibility class. Load a separate facade against the mocked extension,
+    without changing the installed flagos module or the active host provider.
+    """
 
     def select(name):
         monkeypatch.setattr(flagos, "_platform", lambda: name)
         monkeypatch.setattr(flagos, "_has_cuda_runtime", lambda: False)
         monkeypatch.delitem(sys.modules, _ASCEND_STREAM_MODULE, raising=False)
 
-    monkeypatch.setattr(
-        flagos,
-        "_C",
-        types.SimpleNamespace(
-            _get_device=lambda: 0,
-            _set_device=lambda index: None,
-            _get_musa_current_raw_stream=lambda index: _HANDLE,
-        ),
+    bridge = types.SimpleNamespace(
+        _get_device=lambda: 0,
+        _set_device=lambda index: None,
+        _get_musa_current_raw_stream=lambda index: _HANDLE,
     )
+    spec = importlib.util.spec_from_file_location(
+        "torch_fl.flagos", flagos.__file__, submodule_search_locations=[]
+    )
+    isolated = importlib.util.module_from_spec(spec)
+    with monkeypatch.context() as load:
+        load.setattr(torch_fl, "_C", bridge)
+        detector = importlib.import_module("torch_fl._platform")
+        load.setattr(detector, "detect_platform", lambda: "musa")
+        # The host DCU shim also replaces torch.cuda.Stream/Event. The generic
+        # facade must inherit the CPU wheel's original compatibility classes,
+        # not a native torch.Stream subclass supplied by that host provider.
+        load.setattr(torch.cuda, "Stream", torch.cuda.streams.Stream)
+        load.setattr(torch.cuda, "Event", torch.cuda.streams.Event)
+        spec.loader.exec_module(isolated)
+    # MusaStream imports the facade by its canonical name inside its methods.
+    monkeypatch.setitem(sys.modules, "torch_fl.flagos", isolated)
+    monkeypatch.setattr(sys.modules[__name__], "flagos", isolated)
     return select
 
 
@@ -203,3 +224,15 @@ def test_unlisted_vendor_event_degrades_to_the_host_clock(vendor):
 
     assert isinstance(event, flagos._HostTimedEvent)
     assert not _ascend_was_imported()
+
+
+def test_vendor_fixture_keeps_the_installed_host_facade(vendor):
+    """A simulated vendor must not replace the wheel's real stream provider."""
+    installed = torch_fl.flagos
+    stream_type = installed.Stream
+    event_type = installed.Event
+    vendor("musa")
+    assert flagos is not installed
+    assert flagos._C is not torch_fl._C
+    assert installed.Stream is stream_type
+    assert installed.Event is event_type

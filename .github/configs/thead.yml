@@ -1,0 +1,140 @@
+# Copyright 2026 FlagOS Contributors
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+display_name: PPU
+
+setup_script: .github/scripts/set_env.sh
+setup_platform: thead
+
+ci_image: harbor.baai.ac.cn/flagos-dev/pytorch-plugin-fl:manual-20260811-ppu-dev
+
+runner_labels:
+  - flagcicd-810e
+
+# Platform-specific code selects this hardware lane on PRs.
+# Shared or unrecognized code selects every lane conservatively.
+paths_watch:
+  - torch_fl/accelerator/thead/
+  - torch_fl/configs/backends_thead.conf
+  # thead is a CUDA-ABI vendor: it ships no vendor kernel tree and no runtime of
+  # its own (FLAGOS_PLATFORM_RUNTIME_DIR is nvidia). The aten/backends/thead and
+  # runtime/accelerator/thead entries never matched a file; nvidia_memory.h is
+  # the allocator header it actually compiles.
+  - csrc/runtime/accelerator/nvidia/
+  - csrc/runtime/allocator/backends/nvidia_memory.h
+  - .github/scripts/hooks/set_env_thead.sh
+  - .github/scripts/set_env_thead.sh
+  - scripts/vendor/bundle_thead_libtorch.sh
+
+container_volumes: []
+# The Qwen3 steps need a checkpoint, and the runner pod was the only place one
+# lived: this config mounted /mnt/cpfs/models/Qwen3-0.6B from the pod's host.
+# Every dsw-batch pod with that path is gone (the dsw-879514... run that still
+# carried it has no PPU result), so the mount now references nothing and the
+# job container comes up without /models at all. An empty list says so instead
+# of failing inside a runner-side docker create, where the error is invisible.
+# Restore the line -- and integration_environment's MODEL_PATH -- once the
+# checkpoint lives somewhere the pod can mount again.
+integration_environment: {}
+
+# DSW authZ plugin denies --privileged / --ipc=host / --security-opt /
+# --cap-add (Aliyun DSW docs: "authorization denied by plugin authZ"). Mount
+# the AliXPU device nodes explicitly with --device instead (authZ allows it).
+# Three node classes: /dev/alixpu (base), /dev/alixpu_ctl (control),
+# /dev/alixpu_ppu0-15 (compute, 16 on the probed pod -- adjust if the runner
+# exposes a different count). Multi-card NCCL uses --shm-size shared memory,
+# not SysV IPC, so --ipc=host is not needed. GitHub Actions container.options
+# passes these verbatim to docker create, so the list must be static (no shell
+# $(ls ...) expansion).
+container_options: >-
+  --shm-size=4g
+  --device=/dev/alixpu
+  --device=/dev/alixpu_ctl
+  --device=/dev/alixpu_ppu0
+  --device=/dev/alixpu_ppu1
+  --device=/dev/alixpu_ppu2
+  --device=/dev/alixpu_ppu3
+  --device=/dev/alixpu_ppu4
+  --device=/dev/alixpu_ppu5
+  --device=/dev/alixpu_ppu6
+  --device=/dev/alixpu_ppu7
+  --device=/dev/alixpu_ppu8
+  --device=/dev/alixpu_ppu9
+  --device=/dev/alixpu_ppu10
+  --device=/dev/alixpu_ppu11
+  --device=/dev/alixpu_ppu12
+  --device=/dev/alixpu_ppu13
+  --device=/dev/alixpu_ppu14
+  --device=/dev/alixpu_ppu15
+
+timeout_minutes: 60
+# Release/manual wheel-build artifact; CI tests the wheel in the build job.
+wheel_artifact_name: wheel-ppu
+
+# What this platform's environment has to look like before any test runs, read
+# by the first step of .github/integration-manifest.yml through
+# .github/scripts/check_platform_environment.py. The vocabulary is documented on
+# that script; the values are this platform's.
+#
+# PPU runs both builds of the wheel, one job each:
+#
+#   vendor lane (this file's `platform:` name)  the default wheel: stock +cpu
+#       torch, FlagGems routes compiled, backends_thead.conf as it ships. No
+#       boxing kernels, and no lib_thead/ bundle -- that dir is how torch_fl
+#       recognises a PPU-core wheel, and this lane is not one.
+#
+#   boxing lane (`thead-boxing`)  FLAGOS_BUILD_BOXING=1: the generated CUDA
+#       boxing kernels plus PPU's own libtorch staged into lib_thead/ and
+#       selected at import (which is why torch.version.cuda reads 13.0), run
+#       against the day-0 conf backends_thead_boxing.conf that routes the ops
+#       this build registers without a FlagGems kernel to `boxing`.
+#
+# Only the boxing lane bundles PPU's libtorch into lib_thead/: it is the tree
+# the PPU build links into, and it is what makes the wheel identify itself as a
+# PPU wheel (torch.version.cuda then reads 13.0). The vendor lane is the stock
+# +cpu wheel a `pip install` gets, judged by environment_check below.
+#
+# `boxing_lane: true` is what schedules the second job
+# (.github/scripts/ci/generate_matrix.py reads it).
+boxing_lane: true
+
+environment_check:
+  torch_version_prefix: "2.10.0+cpu"
+  cuda_version: null
+  torch_path_forbidden:
+    - /opt/conda/
+  # The vendor lane ships no lib_thead/ bundle: that directory is how torch_fl
+  # identifies a PPU-core wheel, so a bundled one would make this stock +cpu
+  # wheel select the PPU libtorch and read cuda 13.0 (run 40168685639).
+  forbid_package_files:
+    - lib_thead/libtorch_cuda.so
+  require_build_kernels:
+    - flaggems
+  forbid_build_kernels:
+    - boxing
+  flagos_devices:
+    more_than: 0
+
+boxing_environment_check:
+  torch_version_prefix: "2.10.0+cpu"
+  cuda_version: "13.0"
+  torch_path_forbidden:
+    - /opt/conda/
+  require_build_kernels:
+    - flaggems
+    - boxing
+  require_package_files:
+    - lib_thead/libtorch_cuda.so
+  flagos_devices:
+    more_than: 0

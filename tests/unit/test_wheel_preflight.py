@@ -181,6 +181,50 @@ def test_wheel_rejects_missing_or_stale_manifest(tmp_path, manifest):
         preflight.load_wheel(_wheel(tmp_path, manifest))
 
 
+def test_a_wheel_is_accepted_under_its_vendor_name(manifest):
+    """CI lanes export the vendor name; a wheel records the table id.
+
+    The apple lane runs `--platform apple` against a wheel whose manifest says
+    `mps`, which failed closed with "Wheel platform is mps; requested apple".
+    """
+    errors, _ = preflight.check_environment(manifest, platform="cuda")
+    assert errors == []
+    for vendor in ("nvidia", "cuda"):
+        errors, _ = preflight.check_environment(manifest, platform=vendor)
+        assert errors == [], (vendor, errors)
+
+
+def test_the_vendor_equivalence_follows_the_platform_table(manifest):
+    """The row under test is accepted under both names; no other row is.
+
+    Keyed off the wheel's own row (`cuda`) so the test does not depend on which
+    platform the fixture happens to build.
+    """
+    table = json.loads(
+        (SOURCE_ROOT / "cmake" / "flagos_platforms.json").read_text(encoding="utf-8")
+    )["accelerators"]
+    row = manifest["platform"]
+    vendor = table[row]["vendor"]
+    for name in (row, vendor):
+        errors, _ = preflight.check_environment(manifest, platform=name)
+        assert not any("Wheel platform is" in item for item in errors), name
+
+    others = [name for name in table if name != row]
+    for name in others:
+        errors, _ = preflight.check_environment(manifest, platform=name)
+        assert f"Wheel platform is {row}; requested {name}" in errors, name
+
+
+def test_without_the_table_the_comparison_stays_exact(monkeypatch):
+    """Installed beside a wheel there is no table; do not guess an equivalence."""
+    monkeypatch.setattr(
+        preflight, "PLATFORM_TABLE", Path("/nonexistent/flagos_platforms.json")
+    )
+    assert preflight.platform_vendor("apple") is None
+    assert preflight._same_platform("apple", "mps") is False
+    assert preflight._same_platform("mps", "mps") is True
+
+
 def test_sdk_and_platform_mismatches_fail_closed(manifest):
     errors, _ = preflight.check_environment(
         manifest, platform="musa", sdk_version="13.0"
@@ -247,10 +291,62 @@ def test_strict_tested_rejects_optional_build_version_changes(manifest, monkeypa
     assert any("flagtree was built/tested with" in item for item in errors)
 
 
+def test_wheel_name_names_the_platform_id(tmp_path, manifest, capsys):
+    """`--wheel-name` ties --platform to the SDK segment in the filename.
+
+    The artifact names its build variant (`torch_fl-2.10.0+cuda13.3`), and the
+    MPS build's segment is `+mps` -- not the vendor `apple`. The check is
+    therefore against the table id, which is what a wheel's filename carries.
+    """
+    wheel = tmp_path / "torch_fl-2.10.0+cuda13.3-cp312-cp312-linux_x86_64.whl"
+    wheel.write_bytes(_wheel(tmp_path, manifest).read_bytes())
+    assert (
+        preflight.main(["--wheel", str(wheel), "--platform", "cuda", "--wheel-name"])
+        == 0
+    )
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as raised:
+        preflight.main(["--wheel", str(wheel), "--platform", "mps", "--wheel-name"])
+    assert raised.value.code == 2
+    capsys.readouterr()
+    # The MPS build's version carries no SDK segment, so the platform id is the
+    # segment (`+mps`), as a base build's `+cpu` would be.
+    mps_wheel = tmp_path / "torch_fl-2.10.0+mps-cp312-cp312-linux_x86_64.whl"
+    with zipfile.ZipFile(wheel) as source, zipfile.ZipFile(mps_wheel, "w") as target:
+        for item in source.infolist():
+            data = source.read(item.filename)
+            if item.filename.endswith("/METADATA"):
+                data = data.replace(b"Version: 0.1.0+cuda13.3", b"Version: 0.1.0+mps")
+            elif item.filename == preflight.MANIFEST_PATH:
+                data = json.dumps(
+                    {**manifest, "platform": "mps", "wheel_version": "0.1.0+mps"}
+                ).encode()
+            target.writestr(item, data)
+    assert (
+        preflight.main(["--wheel", str(mps_wheel), "--platform", "mps", "--wheel-name"])
+        == 0
+    )
+    capsys.readouterr()
+    # A lane that names its platform by the vendor spelling still finds the
+    # segment through the table, and another platform's still does not.
+    assert (
+        preflight.main(
+            ["--wheel", str(mps_wheel), "--platform", "apple", "--wheel-name"]
+        )
+        == 0
+    )
+    capsys.readouterr()
+    with pytest.raises(SystemExit) as raised:
+        preflight.main(
+            ["--wheel", str(mps_wheel), "--platform", "nvidia", "--wheel-name"]
+        )
+    assert raised.value.code == 2
+
+
 def test_cli_reports_mismatch_before_import(tmp_path, manifest, capsys):
     wheel = _wheel(tmp_path, manifest)
     before = _snapshot_modules()
-    assert preflight.main(["--wheel", str(wheel), "--platform", "musa"]) == 1
+    assert preflight.main(["--wheel", str(wheel), "--platform", "mthreads"]) == 1
     assert "Wheel platform is cuda" in capsys.readouterr().err
     _assert_imported_no_torch_fl(before)
 

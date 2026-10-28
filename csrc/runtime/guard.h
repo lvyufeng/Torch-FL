@@ -12,6 +12,24 @@
 
 #include <flagos.h>
 
+// The platform's own USE_* macro (FLAGOS_PLATFORM_USE_MACRO in the platform
+// table). Only the runtime library target is given it on the command line; this
+// header also compiles as part of csrc/, where nothing defines it, so on the
+// platforms whose csrc/ arms this header's calls mirror, the FLAGOS_ACCEL_<ID>
+// marker csrc/ does get stands in. Without the define those arms silently fall
+// back to the generic ones -- on DCU that is a device-wide synchronize where a
+// per-stream wait was wanted, and on Kunlunxin a device-wide one where the
+// platform's own handle belongs.
+#if !defined(USE_DCU) && defined(FLAGOS_ACCEL_DCU)
+#define USE_DCU 1
+#endif
+#if !defined(USE_KUNLUNXIN) && defined(FLAGOS_ACCEL_KUNLUNXIN)
+#define USE_KUNLUNXIN 1
+#endif
+#if !defined(USE_ILUVATAR) && defined(FLAGOS_ACCEL_ILUVATAR)
+#define USE_ILUVATAR 1
+#endif
+
 #include <cstdint>
 
 #ifdef USE_ASCEND
@@ -20,11 +38,11 @@
 
 // Real c10::cuda:: stream/event plumbing. Boxed DCU uses the separately gated
 // c10::hip provider before these fallback branches. Gated the same way as
-// runtime/allocator/caching_device_allocator.cc's delegation to
+// backends/nvidia_memory.h's delegation to
 // c10::cuda::CUDACachingAllocator (NOT the looser cuda_runtime.h guard used
 // in hooks.h/contiguous_ops.cc/copy_ops.cc): the DCU wheel is hipified and
 // exports c10::hip::HIPCachingAllocator with zero c10::cuda symbols (see
-// backends/dcu_memory.h), so c10::cuda::getCurrentCUDAStream would fail to
+// backends/hygon_memory.h), so c10::cuda::getCurrentCUDAStream would fail to
 // resolve there even though DCU's CUDA-compat runtime satisfies plain
 // cudaStream_t calls. MUSA is excluded for the plainer reason that the Moore
 // Threads toolkit ships no CUDA runtime at all, so the header itself is absent
@@ -40,7 +58,7 @@
 // not ship -- enters the build.
 //
 // FLAGOS_BOXING_BUILD is required on top of that list, for the same reason
-// backends/cuda_memory.h gates its allocator delegation: c10::cuda lives in
+// backends/nvidia_memory.h gates its allocator delegation: c10::cuda lives in
 // libtorch_cuda.so, which the default FlagGems-primary wheel does not ship (it
 // links the CPU-only torch wheel), so the symbols this branch calls are absent
 // at load time even on a real NVIDIA box. Every CUDA-ABI platform that reaches
@@ -59,6 +77,20 @@
 #endif
 
 namespace c10::flagos {
+
+#if defined(USE_DCU)
+// Two entry points this interface needs on DCU are declared here rather than
+// reached through flagos.h, and both are defined in
+// runtime/accelerator/nvidia/ under their Dcu* names: DTK's headers declare
+// PointerGetAttributes as a template, so the flat function a caller that only
+// sees flagos.h resolves has no symbol in the library; and the stream handle
+// this interface synchronizes has to be encoded from the c10 stream id, exactly
+// as the Kunlunxin and Iluvatar arms encode theirs. Every other flagos.h call on
+// DCU is reached by its own name.
+__attribute__((visibility("default"))) Stream_t DcuStreamHandleOf(uintptr_t stream_id);
+__attribute__((visibility("default"))) Error_t
+DcuPointerGetAttributes(PointerAttributes* attributes, const void* ptr);
+#endif
 
 #ifdef USE_ASCEND
 inline int ResolveAscendDevice(c10::Device d) {
@@ -365,6 +397,15 @@ struct GuardImpl final : public c10::impl::DeviceGuardImplInterface {
     aclrtSynchronizeStream(AscendStreamHandle(stream));
 #elif defined(USE_KUNLUNXIN)
     ::StreamSynchronize(KunlunxinStreamHandle(stream));
+#elif defined(USE_ILUVATAR)
+    // corex has a real per-stream wait, so ask for the stream the caller named
+    // rather than falling through to the device-wide one: same answer, and it
+    // does not also drain unrelated work on other streams.
+    ::StreamSynchronize(PlatformStreamHandle(stream));
+#elif defined(USE_DCU)
+    // DCU has a real per-stream wait; the handle comes from the encoded
+    // c10::Stream::id() (see DcuStreamHandleOf in nvidia/stream.cc).
+    ::StreamSynchronize(DcuStreamHandleOf(static_cast<uintptr_t>(stream.id())));
 #else
     ::DeviceSynchronize();
 #endif
@@ -466,7 +507,7 @@ struct GuardImpl final : public c10::impl::DeviceGuardImplInterface {
     // cs.stream() returns cudaStream_t; Stream_t is flagos's opaque
     // `struct Stream*` ABI handle. Both conventions alias a raw
     // cudaStream_t under the hood (see the (cudaStream_t)stream casts in
-    // accelerator/cuda/stream.cc), so this reinterpret is the established
+    // accelerator/nvidia/stream.cc), so this reinterpret is the established
     // flagos<->CUDA stream conversion, not a new pattern.
     ::EventRecord(*(Event_t*)event, (Stream_t)cs.stream());
 #elif defined(USE_ASCEND)

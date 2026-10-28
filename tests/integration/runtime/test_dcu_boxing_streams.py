@@ -8,8 +8,10 @@ import gc
 import threading
 
 import pytest
-import torch
+
+# Preload the DTK device libraries before CPU Torch caches its CUDA hooks.
 import torch_fl
+import torch
 
 pytestmark = pytest.mark.dcu
 

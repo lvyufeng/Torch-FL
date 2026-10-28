@@ -305,10 +305,13 @@ VARIABLES: dict[str, tuple[str, str, str]] = {
     "FLAGOS_ACCELERATOR": (
         SCOPE_BUILD,
         "cuda",
-        "Hardware platform the wheel is built for: cuda, ppu, metax, ascend, "
-        "tsingmicro, dcu, gcu, musa, or bpu. Read by setup.py alone -- the wheel "
-        "records it in _build_config.py, and that record, not a re-export, is "
-        "what every run-time reader consults",
+        "Hardware platform the wheel is built for. Either half of its name is "
+        "accepted: the vendor (nvidia, thead, metax, ascend, tsingmicro, hygon, "
+        "enflame, mthreads, drobotics, apple) or the build-table id it resolves "
+        "to (cuda, ppu, metax, ascend, tsingmicro, dcu, gcu, musa, bpu, mps). "
+        "Read by setup.py alone -- the wheel records the platform id it resolved "
+        "to in _build_config.py, and that record, not a re-export, is what every "
+        "run-time reader consults",
     ),
     "FLAGOS_BUILD_VENDOR": (
         SCOPE_BUILD,
@@ -559,7 +562,7 @@ VARIABLES: dict[str, tuple[str, str, str]] = {
     "FLAGOS_DCU_SKIP_LEGACY_SMOKE": (
         SCOPE_TEST,
         "0 (off)",
-        "In .github/scripts/set_env_dcu.sh, skip the legacy-mode smoke path "
+        "In .github/scripts/set_env_hygon.sh, skip the legacy-mode smoke path "
         "(FLAGOS_DCU_VENDOR_CORE=1) after the decoupled gates have run",
     ),
     # --- Assets and libraries --------------------------------------------
@@ -573,7 +576,7 @@ VARIABLES: dict[str, tuple[str, str, str]] = {
         SCOPE_BUILD_RUNTIME,
         "Auto-discovered",
         "Path to the vendor torch's lib directory, used when no bundled "
-        "lib_maca/lib_dcu/lib_ppu is present. Only the active accelerator's "
+        "lib_metax/lib_hygon/lib_thead is present. Only the active accelerator's "
         "build reads it",
     ),
     "FLAGOS_USE_CACHING_ALLOCATOR": (

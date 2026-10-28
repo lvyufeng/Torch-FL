@@ -32,7 +32,12 @@ import pytest
 import torch
 import torch_fl  # noqa: F401
 
-from backend_conf import routed_backend, routed_backend_or_none
+from backend_conf import (
+    override_is_logged,
+    routed_backend,
+    routed_backend_or_none,
+    _OVERRIDE_UNSERVED,
+)
 
 
 DEVICE = "flagos:0"
@@ -73,10 +78,14 @@ def _run_bmm_subprocess(
     use_out: bool = False,
     check: bool = True,
     stub_python_op: bool = False,
+    dtype: torch.dtype | None = None,
 ) -> subprocess.CompletedProcess:
     """Run a minimal bmm call in a subprocess and return the result."""
     env = os.environ.copy()
     env.update(extra_env)
+    # Spelled in full: the probe body runs in a fresh interpreter that has
+    # imported nothing but torch_fl and torch, so a bare `float32` is a NameError.
+    operands = f"dtype=torch.{str(dtype).split('.')[-1]}, " if dtype else ""
     setup = "import torch_fl, torch; "
     if stub_python_op:
         # This test only verifies routing; avoid triggering FlagGems BMM autotuning.
@@ -87,15 +96,15 @@ def _run_bmm_subprocess(
         )
     if use_out:
         code = setup + (
-            "a = torch.randn(2,4,4,device='flagos:0'); "
-            "b = torch.randn(2,4,4,device='flagos:0'); "
+            f"a = torch.randn(2,4,4,device='flagos:0', {operands}); "
+            f"b = torch.randn(2,4,4,device='flagos:0', {operands}); "
             "out = torch.empty(2,4,4,device='flagos:0'); "
             "torch.bmm(a, b, out=out)"
         )
     else:
         code = setup + (
-            "a = torch.randn(2,4,4,device='flagos:0'); "
-            "b = torch.randn(2,4,4,device='flagos:0'); "
+            f"a = torch.randn(2,4,4,device='flagos:0', {operands}); "
+            f"b = torch.randn(2,4,4,device='flagos:0', {operands}); "
             "torch.bmm(a, b)"
         )
     result = subprocess.run(
@@ -290,10 +299,18 @@ class TestBmmDispatchLog:
     @pytest.mark.main_ops
     def test_dispatch_log_cuda_override(self):
         """FLAGOS_OP_bmm=cuda overrides to cuda backend."""
+        if not (
+            override_is_logged("bmm", "boxing")
+            or override_is_logged("bmm", "flaggems_python")
+        ):
+            pytest.skip(_OVERRIDE_UNSERVED)
         result = _run_bmm_subprocess(
-            {"FLAGOS_LOG": "dispatch", "FLAGOS_OP_bmm": "cuda"}
+            {"FLAGOS_LOG": "dispatch", "FLAGOS_OP_bmm": "cuda"}, check=False
         )
-        assert "[flagos dispatch] bmm -> cuda" in result.stderr, (
+        # check=False: this asserts the route the override selects, not that
+        # the kernel runs -- an unserved route leaves the op unregistered when
+        # the conf hands it to cpu_fallback, so the call fails after the line.
+        assert "[flagos dispatch] bmm -> boxing" in result.stderr, (
             f"Expected cuda dispatch log, got:\n{result.stderr}"
         )
 
@@ -322,7 +339,7 @@ class TestBmmDispatchLog:
             {"FLAGOS_LOG": "dispatch", "FLAGOS_OP_bmm__out": "cuda"},
             use_out=True,
         )
-        assert "[flagos dispatch] bmm.out -> cuda" in result.stderr, (
+        assert "[flagos dispatch] bmm.out -> boxing" in result.stderr, (
             f"Expected cuda dispatch log, got:\n{result.stderr}"
         )
 
@@ -334,6 +351,58 @@ class TestBmmDispatchLog:
         )
         assert "[flagos dispatch] bmm -> ascend" in result.stderr, (
             f"Expected ascend dispatch log, got:\n{result.stderr}"
+        )
+
+
+# The backends a platform with the software low-precision path (FLAGOS_SOFT_LOWP:
+# MetaX, DCU) can serve for an ordinary-dtype bmm.
+#
+# The conf names whatever its generator measured, and those platform confs are
+# written for the FlagGems runtime: MetaX names a FlagGems route the generated
+# kernels hold, so it degrades at dispatch (``Backend::kFlagGemsCpp`` falls back
+# to boxing, then FlagGems) to ``flagos``. Accepting the fall-through rather than
+# one spelling keeps the case honest on both wheel shapes -- a vendor build has
+# no boxing kernels at all, and a boxing build, on some platforms, resolves the
+# same conf there.
+_SOFT_LOWP_ROUTES = {
+    "flagos": {"flagos"},
+    "boxing": {"boxing", "flagos"},
+}
+
+
+def _expected_bmm_route() -> tuple:
+    expected = routed_backend("bmm")
+    return tuple(sorted(_SOFT_LOWP_ROUTES.get(expected, {expected})))
+
+
+class TestFloatBmmKeepsItsRoute:
+    """An ordinary-dtype bmm stays on an accelerated route.
+
+    The software low-precision path runs on FLAGOS_SOFT_LOWP platforms (MetaX,
+    DCU), and the generated wrapper's dtype prelude cannot tell whether the
+    build compiles it -- so on those platforms every bmm wrapper call enters the
+    software implementation, and it has to compute the ordinary dtypes (its
+    decode is a no-op) rather than fail or take the process down: a boxing kernel
+    refuses them ("soft-lowp matrix kernel requires a low-precision input", MetaX
+    CI run 40189509687), the addmm spellings died with fp64 (run 447e9a6), and
+    re-routing the call by name from inside the path segfaulted (run 40195692591).
+
+    The dispatch log names what actually ran, so it separates a routed call from
+    a fallback that still computed the right answer.
+    """
+
+    @pytest.mark.main_ops
+    @pytest.mark.parametrize("dtype", [torch.float32, torch.float64])
+    def test_float_bmm_logs_the_conf_route(self, dtype):
+        expected = _expected_bmm_route()
+        result = _run_bmm_subprocess({"FLAGOS_LOG": "dispatch"}, dtype=dtype)
+        logged = [
+            route
+            for route in expected
+            if f"[flagos dispatch] bmm -> {route}" in result.stderr
+        ]
+        assert logged, (
+            f"Expected one of {expected} for a {dtype} bmm, got:\n{result.stderr}"
         )
 
 

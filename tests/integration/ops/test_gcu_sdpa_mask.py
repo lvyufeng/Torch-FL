@@ -15,7 +15,7 @@
 """The GCU fused SDPA lane, with a mask.
 
 `_scaled_dot_product_efficient_attention` is the leaf
-`csrc/aten/backends/gcu/scaled_dot_product_attention.cc` registers, and unlike
+`csrc/aten/backends/enflame/scaled_dot_product_attention.cc` registers, and unlike
 the vendor flash op it takes a mask. The predicate that decides whether a given
 mask may go to it lives in that file; these cases are the spellings Qwen-Image-2.1
 asks for, plus the ones the predicate declines.
@@ -63,7 +63,7 @@ HEADS, HEAD_DIM = 2, 128
 def _gcu_only():
     from torch_fl._build_config import ACCELERATOR
 
-    if ACCELERATOR != "gcu":
+    if ACCELERATOR != "enflame":
         pytest.skip("GCU build required")
 
 

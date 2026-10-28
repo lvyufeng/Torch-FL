@@ -16,7 +16,7 @@
 #
 # Two consequences worth stating up front, mirroring codegen_kunlunxin.py:
 #
-#   * There is no conf writer. torch_fl/configs/backends_mps.conf is generated
+#   * There is no conf writer. torch_fl/configs/backends_apple.conf is generated
 #     by scripts/codegen/gen_vendor_confs.py from the emitted mps_register.inc
 #     (mps is in VENDORS), so the register file is the single hand-off between
 #     the two generators and the conf keeps one writer.
@@ -28,10 +28,10 @@
 #     skipped op.
 #
 # The generated file is Objective-C++ (.mm) and builds WITHOUT ARC, like the
-# runtime under csrc/runtime/accelerator/mps/: every object this file creates is
+# runtime under csrc/runtime/accelerator/apple/: every object this file creates is
 # released explicitly through mps::MpsRelease.
 #
-# Run it to (re)generate csrc/aten/backends/mps/generated/; `--check` verifies the
+# Run it to (re)generate csrc/aten/backends/apple/generated/; `--check` verifies the
 # committed artifacts are current without writing, which is the mode CI uses.
 
 import argparse
@@ -44,11 +44,13 @@ from pathlib import Path
 # REGISTER_IMPL_TO_DISPATCHER(FnType, dispatcher, ...) matches the
 # DECLARE_DISPATCHER in generated/ops.h exactly (otherwise the build won't link).
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from codegen_ops import schema_to_cpp_name
+from codegen_ops import args_decl, call_args, parse_native_yaml, schema_to_cpp_name
+from codegen_ops import unified_sig
+from torchgen import local
 
 REPO = Path(__file__).resolve().parent.parent.parent
-OUT_MM = REPO / "csrc/aten/backends/mps/generated/mps_kernels.mm"
-OUT_INC = REPO / "csrc/aten/backends/mps/generated/mps_register.inc"
+OUT_MM = REPO / "csrc/aten/backends/apple/generated/mps_kernels.mm"
+OUT_INC = REPO / "csrc/aten/backends/apple/generated/mps_register.inc"
 REGISTER_INC = REPO / "csrc/aten/generated/register.inc"
 
 # ---------------------------------------------------------------------------
@@ -75,6 +77,7 @@ OPS = {
     "add.Tensor": "binary",
     "sub.Tensor": "binary",
     "mul.Tensor": "binary",
+    "rsub.Scalar": "rsub_scalar",
     "add.Scalar": "binary_scalar",
     "sub.Scalar": "binary_scalar",
     "mul.Scalar": "binary_scalar",
@@ -486,12 +489,40 @@ OPS = {
     # `concatTensors:dimension:`. See T_CAT for the shape and dtype contract the
     # node would otherwise answer with a broadcasted wrong answer.
     "cat": "cat",
+    # Qwen3.5's vision preprocessor builds interpolation coordinates with
+    # linspace and arange, then bounds h_floor + 1 with clamp. Leaving these
+    # factories on the host fallback produced a CPU weight tensor that could
+    # not index the flagos coordinate tensor.
+    "linspace": "linspace",
+    "arange": "arange_stop",
+    "arange.start": "arange_start",
+    "arange.start_step": "arange",
+    "clamp": "clamp",
+    # Qwen3.5's visual patch merger calls F.gelu with its default exact and
+    # tanh approximations. MPSGraph has no GELU selector; see T_GELU.
+    "gelu": "gelu",
     # The normalisation a convolutional block calls. Its inference path is one
     # `normalizationWithTensor:...` node fed by the *running* statistics; its
     # training path is declined, because it updates the running buffers in place
     # with the unbiased batch variance and no graph node writes a caller's
     # buffer. See T_BATCH_NORM.
     "native_batch_norm": "batch_norm",
+}
+
+# View operations update only tensor metadata: sizes, strides and storage
+# offset. Their kernels live in csrc/aten/strided_ops.cc because MPSGraph would
+# copy the operand into new storage. The entries here add the PrivateUse1
+# claims and conf routes, while T_METADATA_VIEW generates one guarded kernel per
+# operation and delegates to those native metadata helpers.
+METADATA_VIEW_OPS = {
+    "_unsafe_view": "unsafe_view",
+    "select.int": "select_int",
+    "slice.Tensor": "slice_tensor",
+    "squeeze": "squeeze",
+    "squeeze.dim": "squeeze_dim",
+    "t": "t",
+    "transpose.int": "transpose_int",
+    "unsqueeze": "unsqueeze",
 }
 
 # The aten op a kernel falls back to on the CPU for a case the MPSGraph path does
@@ -501,6 +532,7 @@ AT_OP = {
     "abs": "abs",
     "add.Tensor": "add",
     "sub.Tensor": "sub",
+    "rsub.Scalar": "rsub",
     "mul.Tensor": "mul",
     "add.Scalar": "add",
     "sub.Scalar": "sub",
@@ -645,6 +677,12 @@ AT_OP = {
     # reference's shape message (`Sizes of tensors must match except in dimension
     # {dim}`) and its empty-list error live.
     "cat": "cat",
+    "linspace": "linspace",
+    "arange": "arange",
+    "arange.start": "arange",
+    "arange.start_step": "arange",
+    "clamp": "clamp",
+    "gelu": "gelu",
     # `native_batch_norm` is its own aten kernel, so the round-trip lands on the
     # implementation that owns the in-place running update, the unbiased
     # correction and the inference statistics the body has to reproduce.
@@ -790,6 +828,13 @@ SUPPORTS = {
     "batch_norm": "MpsSupportsReduceDtype",
     "compare_scalar": "MpsSupportsScalarDtype",
     "compare_tensor": "MpsSupportsBinaryDtype",
+    "rsub_scalar": "MpsSupportsScalarDtype",
+    "linspace": "MpsSupportsFactoryDtype",
+    "arange": "MpsSupportsFactoryDtype",
+    "arange_start": "MpsSupportsFactoryDtype",
+    "arange_stop": "MpsSupportsFactoryDtype",
+    "clamp": "MpsSupportsClampDtype",
+    "gelu": "MpsSupportsGeluDtype",
 }
 
 # The selector each body applies to the operand, up to and including the keyword
@@ -801,6 +846,7 @@ CALLS = {
     "abs": "absoluteWithTensor:",
     "add.Tensor": "additionWithPrimaryTensor:",
     "sub.Tensor": "subtractionWithPrimaryTensor:",
+    "rsub.Scalar": "subtractionWithPrimaryTensor:",
     "mul.Tensor": "multiplicationWithPrimaryTensor:",
     "add.Scalar": "additionWithPrimaryTensor:",
     "sub.Scalar": "subtractionWithPrimaryTensor:",
@@ -937,6 +983,14 @@ CALLS = {
     "masked_fill.Scalar": "",
     "masked_fill.Tensor": "",
     "cat": "",
+    "linspace": "",
+    "arange": "",
+    "arange_stop": "",
+    "arange_start": "",
+    "arange.start": "",
+    "arange.start_step": "",
+    "clamp": "",
+    "gelu": "",
     # Unused: the batch_norm body builds its own node
     # (`normalizationWithTensor:...`) and its own `save_invstd` subgraph, so it
     # names no prefix here. The entry exists because `render` reads `CALLS[op]`
@@ -961,6 +1015,7 @@ RANK = {
 ALPHA = {
     "add.Tensor": (", const at::Scalar& alpha", ", alpha", "alpha"),
     "sub.Tensor": (", const at::Scalar& alpha", ", alpha", "alpha"),
+    "rsub.Scalar": (", const at::Scalar& alpha", ", alpha", "alpha"),
     "add.Scalar": (", const at::Scalar& alpha", ", alpha", "alpha"),
     "sub.Scalar": (", const at::Scalar& alpha", ", alpha", "alpha"),
 }
@@ -989,6 +1044,7 @@ KEY_PARTS = {
     "ne.Scalar": ", other",
     "add.Tensor": ", alpha",
     "sub.Tensor": ", alpha",
+    "rsub.Scalar": ", other, alpha",
     "mul.Tensor": "",
     "add.Scalar": ", other, alpha",
     "sub.Scalar": ", other, alpha",
@@ -1160,6 +1216,17 @@ KEY_PARTS = {
     # only, and `momentum` weights the running update that only the training path
     # performs. See T_BATCH_NORM.
     "native_batch_norm": ", eps",
+    "linspace": ", start.toDouble(), end.toDouble()",
+    "arange": "",
+    "arange_stop": "",
+    "arange_start": "",
+    "arange.start": "",
+    # The arange implementations copy the complete reference sequence into the
+    # device allocation, so no mode-dependent endpoint or rounding rule is
+    # baked into a graph.
+    "arange.start_step": "",
+    "clamp": ", min, max",
+    "gelu": ", approximate",
 }
 
 # The tail a reduce body runs once the reduction node exists, for the ops whose
@@ -1233,14 +1300,58 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_RSUB_SCALAR = """\
+at::Tensor {kernel}(
+    const at::Tensor& self,
+    const at::Scalar& other,
+    const at::Scalar& alpha) {{
+  if (!mps::{supports}(self.scalar_type(), other)) {{
+    return at::{at_op}(self.cpu(), other, alpha).to(self.device());
+  }}
+  at::Tensor self_c = self.contiguous();
+  at::Tensor out = at::empty(self_c.sizes(), self_c.options());
+  if (out.numel() == 0) {{
+    return out;
+  }}
+  const bool ran = mps::MpsRunGraph(
+      mps::MpsGraphKey("{op}"{key_parts}),
+      {{self_c}},
+      out,
+      ^MPSGraphTensor*(MPSGraph* graph, NSArray<MPSGraphTensor*>* args) {{
+        MPSGraphTensor* scaled = mps::MpsScaledByScalar(
+            graph, args[0], {alpha_operand}, self_c.scalar_type());
+        MPSGraphTensor* offset =
+            mps::MpsConstant(graph, other, self_c.scalar_type());
+        if (scaled == nil || offset == nil) {{
+          return nil;
+        }}
+        offset = [graph broadcastTensor:offset
+                                toShape:mps::MpsShapeOf(self_c.sizes())
+                                   name:nil];
+        if (offset == nil) {{
+          return nil;
+        }}
+        return [graph {call}offset secondaryTensor:scaled name:nil];
+      }});
+  if (!ran) {{
+    return at::{at_op}(self.cpu(), other, alpha).to(self.device());
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The elementwise body over two tensors. The graph builds each operand in its own
 # aten shape and the named arithmetic selectors broadcast them exactly as aten
 # does, so a (4, 1) against a (4, 5) needs no expansion on either side; the result
 # shape is the reference's own (`at::infer_size`), and a pair that cannot
-# broadcast takes the round-trip so the reference raises its own error.
+# broadcast takes the round-trip so the reference raises its own error. A
+# one-element secondary operand has scalar rank in the graph, matching aten's
+# broadcast rather than the buffer's single element.
 #
 # `alpha` is folded into the secondary operand as a multiplication by a constant,
 # and only when it is not 1: `a + b` -- what almost every caller writes -- builds
@@ -1248,26 +1359,73 @@ REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
 # operands' own, which the dtype gate above accepted nothing else for.
 T_BINARY = """\
 at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& other{alpha_param}) {{
+  // Evaluate the reference's broadcast and alpha checks before the graph. They
+  // are also needed when the call takes the CPU round-trip below.
+  std::vector<int64_t> out_shape;
+  try {{
+    out_shape = at::infer_size(self.sizes(), other.sizes());
+  }} catch (const std::exception&) {{
+    return at::{at_op}(self.cpu(), other.cpu(){alpha_arg}).to(self.device());
+  }}
   if (!mps::{supports}(self.scalar_type(), other.scalar_type())) {{
+    return at::{at_op}(self.cpu(), other.cpu(){alpha_arg}).to(self.device());
+  }}
+  if (!mps::MpsSupportsScalarAlpha(self.scalar_type(), {alpha_operand})) {{
     return at::{at_op}(self.cpu(), other.cpu(){alpha_arg}).to(self.device());
   }}
   at::Tensor self_c = self.contiguous();
   at::Tensor other_c = other.contiguous();
-  std::vector<int64_t> out_shape;
-  try {{
-    out_shape = at::infer_size(self_c.sizes(), other_c.sizes());
-  }} catch (const std::exception&) {{
-    return at::{at_op}(self.cpu(), other.cpu(){alpha_arg}).to(self.device());
-  }}
   at::Tensor out = at::empty(out_shape, self_c.options());
   if (out.numel() == 0) {{
+    return out;
+  }}
+  const bool scalar_rhs = other_c.numel() == 1;
+  const std::vector<std::vector<int64_t>> argument_shapes = {{
+      self_c.sizes().vec(),
+      scalar_rhs ? out_shape : other_c.sizes().vec()}};
+  if (self_c.sizes().equals(at::IntArrayRef(out_shape)) || scalar_rhs) {{
+    const std::vector<at::Tensor> inputs =
+        self_c.sizes().equals(at::IntArrayRef(out_shape))
+        ? std::vector<at::Tensor>{{self_c}}
+        : std::vector<at::Tensor>{{self_c, other_c}};
+    const bool ran = mps::MpsRunGraph(
+        mps::MpsGraphKey("{op}"{key_parts}),
+        inputs,
+        out,
+        argument_shapes,
+        ^MPSGraphTensor*(MPSGraph* graph, NSArray<MPSGraphTensor*>* args) {{
+          MPSGraphTensor* primary = args[0];
+          MPSGraphTensor* secondary = args.count == 2
+              ? args[1]
+              : mps::MpsConstant(graph, 1, self_c.scalar_type());
+          MPSGraphTensor* other_t = mps::MpsScaledByScalar(
+              graph, secondary, {alpha_operand}, self_c.scalar_type());
+          secondary = nil;
+          if (other_t != nil && !scalar_rhs) {{
+            secondary = [graph broadcastTensor:other_t
+                                       toShape:mps::MpsFlatShape(out.numel())
+                                          name:nil];
+          }} else if (other_t != nil) {{
+            secondary = other_t;
+          }}
+          if (secondary == nil) {{
+            return nil;
+          }}
+          return [graph {call}primary secondaryTensor:secondary name:nil];
+        }});
+    if (!ran) {{
+      return at::{at_op}(self.cpu(), other.cpu(){alpha_arg}).to(self.device());
+    }}
     return out;
   }}
   const bool ran = mps::MpsRunGraph(
       mps::MpsGraphKey("{op}"{key_parts}),
       {{self_c, other_c}},
       out,
+      argument_shapes,
       ^MPSGraphTensor*(MPSGraph* graph, NSArray<MPSGraphTensor*>* args) {{
+        // An alpha MpsConstant cannot express exactly in this width takes the
+        // round-trip. Passing a nil operand to the selector aborts MPSGraph.
         MPSGraphTensor* other_t = mps::MpsScaledByScalar(
             graph, args[1], {alpha_operand}, self_c.scalar_type());
         if (other_t == nil) {{
@@ -1281,7 +1439,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& other{alpha_param}
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The elementwise body over a tensor and a host scalar. The scalar becomes a
@@ -1327,7 +1485,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Scalar& other{alpha_param}
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The reduction body. `dim` is normalised once, on the host, into the axes the
@@ -1376,7 +1534,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `all` returns bool for every input width, so it cannot share T_REDUCE: the
@@ -1427,7 +1585,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_ALL_DIM = """\
@@ -1476,7 +1634,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_ALL_DIMS = """\
@@ -1527,7 +1685,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_TRIU = r"""at::Tensor {kernel}(const at::Tensor& self, int64_t diagonal) {{
@@ -1582,7 +1740,7 @@ T_TRIU = r"""at::Tensor {kernel}(const at::Tensor& self, int64_t diagonal) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # aten argmax takes the first maximum, with a later NaN replacing an earlier
@@ -1716,7 +1874,7 @@ at::Tensor {kernel}(
   return selected;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # aten's triangular solve computes X for AX = B (left=true) or XA = B
@@ -1836,7 +1994,7 @@ T_SOLVE_TRIANGULAR = r"""at::Tensor {kernel}(
   return graph_out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The matrix-multiply body. One MPSGraph selector serves both ops, because it
@@ -1929,7 +2087,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& mat2) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The softmax body. MPSGraph has the whole operation behind one selector, so the
@@ -1998,7 +2156,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The tensor-raised-to-a-scalar body. The exponent is a host value, so it becomes
@@ -2041,7 +2199,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Scalar& other) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The convolution body, over the one spelling a PrivateUse1 tensor reaches:
@@ -2259,7 +2417,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The SiLU activation, `x * sigmoid(x)`, which is what a SwiGLU MLP multiplies
@@ -2322,7 +2480,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The SiLU derivative, shared by autograd's `silu_backward` and a call to
@@ -2394,7 +2552,7 @@ at::Tensor {kernel}(const at::Tensor& grad_output, const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `embedding` is the first body here that has to decide whether the *graph* can
@@ -2471,7 +2629,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The one-node unary template for an op MPSGraph names directly -- `exp` today,
@@ -2506,7 +2664,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `rsqrt` -- `1 / sqrt(x)`, the tail of every normalisation, and the second body
@@ -2566,7 +2724,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_EMBEDDING = """\
@@ -2654,7 +2812,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `index_select` is the read the `embedding` body above performs, named
@@ -2801,7 +2959,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `take` is the third spelling of the embedding gather, and it is the one with
@@ -2945,7 +3103,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& index) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `gather` is the fourth and last of the read family, and the one whose contract
@@ -3206,7 +3364,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `div` closes the elementwise arithmetic set -- `add`, `sub` and `mul` have been
@@ -3291,7 +3449,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& other) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The elementwise body over a tensor and a host scalar, for `div.Scalar`: the
@@ -3333,7 +3491,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Scalar& other) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `reciprocal` is `1 / x`, and this body is the unary template with the division
@@ -3376,7 +3534,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `F.layer_norm` -- the normalisation a transformer calls once per block, right
@@ -3598,7 +3756,7 @@ T_LAYER_NORM = """\
   return {{out, mean, rstd}};
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `where.self(condition, self, other)` is MPSGraph's own ternary select node,
@@ -3855,7 +4013,7 @@ T_BATCH_NORM = """\
   return {{out, stat_mean, stat_var}};
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The ref and mask spellings Qwen3.5 reaches have direct MPSGraph comparison
@@ -3887,7 +4045,7 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Scalar& other) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_COMPARE_TENSOR = """\
@@ -3917,7 +4075,19 @@ at::Tensor {kernel}(const at::Tensor& self, const at::Tensor& other) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_METADATA_VIEW = """\
+at::Tensor {kernel}({args}) {{
+  ::torch_fl_mps::DrainAll();
+  // MpsRunGraph hands an operand's storage without an allocation record for
+  // asynchronous graph work. Finish queued work before the returned view can
+  // release the last owner of an operand such as an expanded weight.
+  return at::native::flagos::{helper}({call_args});
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 T_WHERE = """\
@@ -3974,7 +4144,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `masked_fill(self, mask, value)` selects a stored scalar where a stored bool
@@ -4033,7 +4203,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The scalar-tensor spelling of the same select. The value must be a
@@ -4086,7 +4256,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # `cat(tensors, dim)` is MPSGraph's variadic `concatTensors:dimension:name:`, and
@@ -4261,7 +4431,7 @@ at::Tensor {kernel}(const at::ITensorListRef& tensors, int64_t dim) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 # `tanh` is the activation a transformer block reaches for at both ends -- the
 # tanh approximation inside a GELU and the one inside a recurrent or attention
@@ -4334,7 +4504,7 @@ at::Tensor {kernel}(const at::Tensor& self) {{
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # aten's `index.Tensor` receives a list in which every unindexed axis is a full
@@ -4516,7 +4686,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # The cumulative sum is one axis node. Aten resolves an accumulator dtype from
@@ -4562,7 +4732,7 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
 # Softplus is `x / beta` when `beta * x > threshold`, and
@@ -4641,14 +4811,297 @@ at::Tensor {kernel}(
   return out;
 }}
 
-REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kMps, {kernel})
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
 """
 
+T_LINSPACE = """\\
+at::Tensor {kernel}(
+    const at::Scalar& start, const at::Scalar& end, int64_t steps,
+    ::std::optional<at::ScalarType> dtype,
+    ::std::optional<at::Layout> layout,
+    ::std::optional<at::Device> device,
+    ::std::optional<bool> pin_memory) {{
+  const auto target = device.value_or(mps::MpsCurrentDevice());
+  const auto result_dtype = dtype.value_or(at::kFloat);
+  if (!target.is_privateuseone() || steps <= 0 ||
+      layout.value_or(at::kStrided) != at::kStrided ||
+      pin_memory.value_or(false) || start.isComplex() || end.isComplex() ||
+      !mps::{supports}(result_dtype)) {{
+    return at::{at_op}(
+        start, end, steps, dtype, layout, device, pin_memory);
+  }}
+  at::Tensor out = at::empty(
+      {{steps}},
+      at::TensorOptions().dtype(result_dtype).device(target));
+  // The reference rounds each position at the requested dtype. A float32
+  // grid differs from a bfloat16 one at the crop boundaries, so evaluate the
+  // formula in PyTorch's factory and put its values in the device allocation.
+  const at::Tensor host = at::{at_op}(
+      start, end, steps, dtype, layout, at::kCPU, false);
+  out.copy_(host);
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_ARANGE_STOP = """\\
+at::Tensor {kernel}(
+    const at::Scalar& end,
+    ::std::optional<at::ScalarType> dtype,
+    ::std::optional<at::Layout> layout,
+    ::std::optional<at::Device> device,
+    ::std::optional<bool> pin_memory) {{
+  const auto target = device.value_or(mps::MpsCurrentDevice());
+  if (!target.is_privateuseone()) {{
+    return at::{at_op}(end, dtype, layout, device, pin_memory);
+  }}
+  const auto result_dtype = dtype.value_or(
+      end.isFloatingPoint()
+          ? at::typeMetaToScalarType(at::get_default_dtype())
+          : at::kLong);
+  if (layout.value_or(at::kStrided) != at::kStrided ||
+      pin_memory.value_or(false) || end.isComplex() ||
+      !mps::{supports}(result_dtype)) {{
+    return at::{at_op}(end, dtype, layout, device, pin_memory);
+  }}
+  const at::Tensor host =
+      at::{at_op}(end, result_dtype, at::kStrided, at::kCPU, false);
+  at::Tensor out = at::empty(host.sizes(), host.options().device(target));
+  if (out.numel() > 0) {{
+    out.copy_(host);
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_ARANGE_START = """\\
+at::Tensor {kernel}(
+    const at::Scalar& start, const at::Scalar& end,
+    ::std::optional<at::ScalarType> dtype,
+    ::std::optional<at::Layout> layout,
+    ::std::optional<at::Device> device,
+    ::std::optional<bool> pin_memory) {{
+  const auto target = device.value_or(mps::MpsCurrentDevice());
+  if (!target.is_privateuseone() || start.isComplex() || end.isComplex()) {{
+    return at::arange(start, end, dtype, layout, device, pin_memory);
+  }}
+  const auto result_dtype = dtype.value_or(
+      start.isFloatingPoint() || end.isFloatingPoint()
+          ? at::typeMetaToScalarType(at::get_default_dtype())
+          : at::kLong);
+  if (layout.value_or(at::kStrided) != at::kStrided ||
+      pin_memory.value_or(false) || !mps::{supports}(result_dtype)) {{
+    return at::arange(start, end, dtype, layout, device, pin_memory);
+  }}
+  const at::Tensor host = at::arange(
+      start, end, result_dtype, at::kStrided, at::kCPU, false);
+  at::Tensor out = at::empty(host.sizes(), host.options().device(target));
+  if (out.numel() > 0) {{
+    out.copy_(host);
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_ARANGE = """\\
+at::Tensor {kernel}(
+    const at::Scalar& start, const at::Scalar& end, const at::Scalar& step,
+    ::std::optional<at::ScalarType> dtype,
+    ::std::optional<at::Layout> layout,
+    ::std::optional<at::Device> device,
+    ::std::optional<bool> pin_memory) {{
+  const auto target = device.value_or(mps::MpsCurrentDevice());
+  if (!target.is_privateuseone() || start.isComplex() ||
+      end.isComplex() || step.isComplex()) {{
+    return at::arange(
+        start, end, step, dtype, layout, device, pin_memory);
+  }}
+  const auto result_dtype = dtype.value_or(
+      start.isFloatingPoint() || end.isFloatingPoint() ||
+              step.isFloatingPoint()
+          ? at::typeMetaToScalarType(at::get_default_dtype())
+          : at::kLong);
+  if (layout.value_or(at::kStrided) != at::kStrided ||
+      pin_memory.value_or(false) || !mps::{supports}(result_dtype)) {{
+    return at::arange(
+        start, end, step, dtype, layout, device, pin_memory);
+  }}
+  // The reference factory is named directly. A call through the arange
+  // dispatcher recursed into this body even after switching to a CPU device.
+  const at::Tensor host = at::arange(
+      start, end, step, result_dtype, at::kStrided, at::kCPU, false);
+  at::Tensor out = at::empty(host.sizes(), host.options().device(target));
+  if (out.numel() > 0) {{
+    out.copy_(host);
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_CLAMP = """\\
+at::Tensor {kernel}(
+    const at::Tensor& self,
+    const ::std::optional<at::Scalar>& min,
+    const ::std::optional<at::Scalar>& max) {{
+  // The reference's clamp dtype promotion depends on both bounds. Use it
+  // when the result width differs, since the graph has no implicit promotion.
+  const at::Tensor host = at::{at_op}(self.cpu(), min, max);
+  if (host.scalar_type() != self.scalar_type() ||
+      !mps::{supports}(self.scalar_type(), min, max)) {{
+    return host.to(self.device());
+  }}
+  at::Tensor input = self.contiguous();
+  at::Tensor out = at::empty(input.sizes(), input.options());
+  MPSDataType data_type;
+  if (!mps::MpsDataTypeOf(self.scalar_type(), &data_type)) {{
+    return host.to(self.device());
+  }}
+  const bool ran = mps::MpsRunGraph(
+      mps::MpsGraphKey("{op}"),
+      {{input}},
+      out,
+      ^MPSGraphTensor*(MPSGraph* graph, NSArray<MPSGraphTensor*>* args) {{
+        MPSGraphTensor* value = args[0];
+        if (min.has_value()) {{
+          MPSGraphTensor* lower =
+              mps::MpsConstant(graph, *min, self.scalar_type());
+          if (lower == nil) {{
+            return nil;
+          }}
+          lower = [graph broadcastTensor:lower
+                                 toShape:mps::MpsFlatShape(input.numel())
+                                    name:nil];
+          value = [graph maximumWithPrimaryTensor:value
+                                 secondaryTensor:lower
+                                            name:nil];
+        }}
+        if (max.has_value()) {{
+          MPSGraphTensor* upper =
+              mps::MpsConstant(graph, *max, self.scalar_type());
+          if (upper == nil) {{
+            return nil;
+          }}
+          upper = [graph broadcastTensor:upper
+                                 toShape:mps::MpsFlatShape(input.numel())
+                                    name:nil];
+          value = [graph minimumWithPrimaryTensor:value
+                                 secondaryTensor:upper
+                                            name:nil];
+        }}
+        return value;
+      }});
+  if (!ran) {{
+    return host.to(self.device());
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
+
+T_GELU = """\
+at::Tensor {kernel}(
+    const at::Tensor& self, c10::string_view approximate) {{
+  if (!mps::{supports}(self.scalar_type(), approximate)) {{
+    return at::{at_op}(self.cpu(), approximate).to(self.device());
+  }}
+  at::Tensor self_c = self.contiguous();
+  at::Tensor out = at::empty(self_c.sizes(), self_c.options());
+  if (out.numel() == 0) {{
+    return out;
+  }}
+  const bool ran = mps::MpsRunGraph(
+      mps::MpsGraphKey("{op}"{key_parts}),
+      {{self_c}},
+      out,
+      ^MPSGraphTensor*(MPSGraph* graph, NSArray<MPSGraphTensor*>* args) {{
+        if (approximate == "tanh") {{
+          MPSGraphTensor* scaled = mps::MpsScaledByScalar(
+              graph, args[0], std::sqrt(2.0 / M_PI), self_c.scalar_type());
+          MPSGraphTensor* raised = scaled == nil
+              ? nil
+              : [graph powerWithPrimaryTensor:args[0]
+                              secondaryTensor:mps::MpsConstant(
+                                  graph, static_cast<int64_t>(3),
+                                  self_c.scalar_type())
+                                         name:nil];
+          MPSGraphTensor* cubic = raised == nil
+              ? nil
+              : mps::MpsScaledByScalar(
+                    graph, raised, 0.044715, self_c.scalar_type());
+          cubic = cubic == nil
+              ? nil
+              : [graph additionWithPrimaryTensor:args[0]
+                                secondaryTensor:cubic
+                                           name:nil];
+          cubic = cubic == nil
+              ? nil
+              : mps::MpsScaledByScalar(
+                    graph, cubic, std::sqrt(2.0 / M_PI),
+                    self_c.scalar_type());
+          MPSGraphTensor* tanh = cubic == nil
+              ? nil
+              : [graph tanhWithTensor:cubic name:nil];
+          MPSGraphTensor* shifted = tanh == nil
+              ? nil
+              : [graph additionWithPrimaryTensor:tanh
+                                secondaryTensor:mps::MpsConstant(
+                                    graph, 1.0, self_c.scalar_type())
+                                           name:nil];
+          MPSGraphTensor* halved = shifted == nil
+              ? nil
+              : mps::MpsScaledByScalar(
+                    graph, shifted, 0.5, self_c.scalar_type());
+          return halved == nil
+              ? nil
+              : [graph multiplicationWithPrimaryTensor:args[0]
+                                       secondaryTensor:halved
+                                                  name:nil];
+        }}
+        MPSGraphTensor* scaled = mps::MpsScaledByScalar(
+            graph, args[0], 1.0 / std::sqrt(2.0), self_c.scalar_type());
+        MPSGraphTensor* erf = scaled == nil
+            ? nil
+            : [graph erfWithTensor:scaled name:nil];
+        MPSGraphTensor* shifted = mps::MpsScaledByScalar(
+            graph, erf, 1.0, self_c.scalar_type());
+        if (shifted == nil) {{
+          return nil;
+        }}
+        shifted = [graph additionWithPrimaryTensor:shifted
+                                  secondaryTensor:
+                                      mps::MpsConstant(
+                                          graph, 1.0, self_c.scalar_type())
+                                             name:nil];
+        MPSGraphTensor* halved = mps::MpsScaledByScalar(
+            graph, shifted, 0.5, self_c.scalar_type());
+        return halved == nil
+            ? nil
+            : [graph multiplicationWithPrimaryTensor:args[0]
+                                     secondaryTensor:halved
+                                                name:nil];
+      }});
+  if (!ran) {{
+    return at::{at_op}(self.cpu(), approximate).to(self.device());
+  }}
+  return out;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kApple, {kernel})
+"""
 
 CATEGORIES = {
     "unary": T_UNARY,
     "trig": T_UNARY,
     "binary": T_BINARY,
+    "rsub_scalar": T_RSUB_SCALAR,
     "binary_scalar": T_SCALAR,
     "reduce": T_REDUCE,
     "all": T_ALL,
@@ -4705,6 +5158,13 @@ CATEGORIES = {
     "batch_norm": T_BATCH_NORM,
     "compare_scalar": T_COMPARE_SCALAR,
     "compare_tensor": T_COMPARE_TENSOR,
+    "metadata_view": T_METADATA_VIEW,
+    "linspace": T_LINSPACE,
+    "arange": T_ARANGE,
+    "arange_start": T_ARANGE_START,
+    "arange_stop": T_ARANGE_STOP,
+    "clamp": T_CLAMP,
+    "gelu": T_GELU,
 }
 
 FILE_HEADER = """\
@@ -4721,7 +5181,7 @@ FILE_HEADER = """\
 // reused, so the per-call cost is a schedule rather than a graph construction;
 // the plan cache that does it is in mps_common.mm. Dispatchers are declared in
 // generated/ops.h (shared with the CUDA codegen); here we only fill the
-// Backend::kMps slot.
+// Backend::kApple slot.
 //
 // Nothing below re-tags a tensor onto DispatchKey::MPS or CUDA: the tensors stay
 // on PrivateUse1 and the runtime's shared MTLBuffers are described to MPSGraph
@@ -4736,6 +5196,7 @@ FILE_HEADER = """\
 // This file is Objective-C++ and builds without ARC, like the Metal runtime.
 
 #include "../../../generated/ops.h"
+#include "../../../strided_ops.h"
 #include <ATen/ExpandUtils.h>
 #include <ATen/TensorIndexing.h>
 #include <ATen/core/Tensor.h>
@@ -4747,11 +5208,12 @@ FILE_HEADER = """\
 #include <ATen/ops/cumsum.h>
 #include <ATen/ops/convolution.h>
 #include <ATen/ops/cos.h>
-#include <ATen/ops/eq.h>
 #include <ATen/ops/div.h>
+#include <ATen/ops/eq.h>
 #include <ATen/ops/empty.h>
 #include <ATen/ops/embedding.h>
 #include <ATen/ops/gather.h>
+#include <ATen/ops/gelu.h>
 #include <ATen/ops/index_select.h>
 #include <ATen/ops/le.h>
 #include <ATen/ops/masked_fill.h>
@@ -4775,9 +5237,10 @@ FILE_HEADER = """\
 #include <c10/core/ScalarType.h>
 #include <exception>
 #include <optional>
+#include <string_view>
 #include <vector>
 #include "../mps_common.h"
-#include "runtime/accelerator/mps/mps_runtime.h"
+#include "runtime/accelerator/apple/mps_runtime.h"
 
 namespace at::native::flagos {
 // The helpers live in the nested at::native::flagos::mps namespace, so an
@@ -4803,7 +5266,7 @@ INC_HEADER = """\
 // cpu_fallback. So this file is exactly the Apple backend's coverage set.
 //
 // It is also what scripts/codegen/gen_vendor_confs.py reads to decide which ops
-// backends_mps.conf may name for this backend, so the conf cannot claim a route
+// backends_apple.conf may name for this backend, so the conf cannot claim a route
 // this file does not register.
 
 """
@@ -4828,6 +5291,13 @@ def render():
     set. Raises on an op with no wrapper, so a stale register.inc fails loudly
     instead of emitting a file that will not link."""
     wrappers = wrapper_map()
+    import torchgen
+
+    root = Path(torchgen.__file__).parent / "packaged" / "ATen" / "native"
+    native = parse_native_yaml(
+        str(root / "native_functions.yaml"), str(root / "tags.yaml")
+    )
+    native_functions = {str(func.func.name): func for func in native.native_functions}
     bodies = []
     covered = []
     for op, category in OPS.items():
@@ -4891,6 +5361,35 @@ def render():
             )
         )
         covered.append((op, category))
+
+    for op, helper in METADATA_VIEW_OPS.items():
+        wrapper = wrappers.get(op)
+        if wrapper is None:
+            raise SystemExit(
+                f"error: {op} has no wrapper in {REGISTER_INC.relative_to(REPO)}; "
+                "run scripts/codegen/codegen_ops.py first"
+            )
+        fn, disp = schema_to_cpp_name(op)
+        native_function = native_functions.get(op)
+        if native_function is None:
+            raise SystemExit(f"error: {op} is absent from native_functions.yaml")
+        with local.parametrize(
+            use_const_ref_for_mutable_tensors=False,
+            use_ilistref_for_tensor_lists=False,
+        ):
+            _, ret, args = unified_sig(native_function)
+        kernel = fn[:-2] + "KernelMps"
+        bodies.append(
+            CATEGORIES["metadata_view"].format(
+                kernel=kernel,
+                fn=fn,
+                disp=disp,
+                args=args_decl(args),
+                call_args=call_args(args),
+                helper=helper,
+            )
+        )
+        covered.append((op, "metadata_view"))
 
     return (
         FILE_HEADER + "\n\n".join(bodies) + FILE_FOOTER,

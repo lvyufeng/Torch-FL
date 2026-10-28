@@ -28,7 +28,7 @@ from pathlib import Path
 
 _REPO = Path(__file__).resolve().parents[2]
 _GENERATOR = _REPO / "scripts/codegen/gen_vendor_confs.py"
-_CONFIG = _REPO / "torch_fl/configs/backends_ppu.conf"
+_CONFIG = _REPO / "torch_fl/configs/backends_thead.conf"
 
 
 def test_ppu_contract_failures_are_regenerable_boxing_exceptions():
@@ -46,7 +46,7 @@ def test_ppu_contract_failures_are_regenerable_boxing_exceptions():
         break
 
     assert gaps is not None
-    assert {"_unsafe_view", "slice.Tensor"} <= gaps["ppu"]
+    assert {"_unsafe_view", "slice.Tensor"} <= gaps["thead"]
 
     routes = {}
     for raw in _CONFIG.read_text().splitlines():
@@ -54,5 +54,8 @@ def test_ppu_contract_failures_are_regenerable_boxing_exceptions():
         if line and "=" in line:
             op, backend = (part.strip() for part in line.split("=", 1))
             routes[op] = backend
-    assert routes["_unsafe_view"] == "cuda"
-    assert routes["slice.Tensor"] == "cuda"
+    # thead is a boxing platform: these two are held off FlagGems by the gap
+    # set above, and a default conf spells a held op `none` (cpu_fallback), not
+    # `boxing` -- the day-0 variant is the file that routes them to the boxer.
+    assert routes["_unsafe_view"] == "none"
+    assert routes["slice.Tensor"] == "none"

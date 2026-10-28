@@ -62,7 +62,7 @@ The commands are read through ``manifest_composer``, so this file and the
 loader answer "what does this platform run?" the same way. That reader parses
 YAML, which costs nothing here: this file also runs inside the DCU container, and
 that environment already carries PyYAML for ``test_ci_pip_cache.py`` and for
-FlagGems' own dependencies (``PyYAML==6.0.1`` in ``set_env_dcu.sh``).
+FlagGems' own dependencies (``PyYAML==6.0.1`` in ``set_env_hygon.sh``).
 """
 
 import itertools
@@ -72,7 +72,7 @@ from pathlib import Path
 from typing import NamedTuple
 
 import pytest
-from manifest_composer import composed_steps, platform_names
+from manifest_composer import boxing_platforms, composed_steps, platform_names
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -173,8 +173,8 @@ def _copied_paths(run_script: str) -> list[str]:
     return copied
 
 
-def _manifest_commands(platform: str) -> list[str]:
-    """The command of every group one platform runs, in the order it runs them.
+def _manifest_commands(platform: str, boxing_lane: bool = False) -> list[str]:
+    """The command of every group one platform's build runs, in order.
 
     Composed from the shared manifest rather than read out of the platform's
     config, which is what the pipeline itself does: the loader job calls
@@ -184,7 +184,9 @@ def _manifest_commands(platform: str) -> list[str]:
     script too, but the workflow runs that one outside this workspace, so it is
     not among these.
     """
-    return [group["command"] for group in composed_steps(platform)]
+    return [
+        group["command"] for group in composed_steps(platform, boxing_lane=boxing_lane)
+    ]
 
 
 def _script_references(platform: str) -> list[tuple[str, str]]:
@@ -233,7 +235,7 @@ def test_dcu_manifest_still_runs_a_repository_script():
     that stops being true, the guards have nothing to hold, and this says so
     rather than letting them pass by accident.
     """
-    references = _script_references("dcu")
+    references = _script_references("hygon")
     assert references, "the reader found no repository script in the DCU manifest"
     assert all(_runs_in_the_checkout(command) for command, _ in references), (
         "the DCU manifest names a repository script from a command that stays in "
@@ -250,7 +252,7 @@ def test_the_manifest_reader_reads_the_composed_groups():
     this workspace -- and then hold a command to a workspace requirement
     nothing has.
     """
-    commands = _manifest_commands("dcu")
+    commands = _manifest_commands("hygon")
     assert commands, "the reader found no commands at all, which cannot be right"
     assert not any("set_env" in command for command in commands), commands
     # The environment check is the group that replaced the per-platform
@@ -439,12 +441,18 @@ def _selection_of(command: str) -> _Selection | None:
 
 
 def _manifest_selections(platform: str) -> list[_Selection]:
-    """What every pytest invocation in one platform's manifest runs."""
+    """What every pytest invocation in one platform's manifest runs.
+
+    A boxing platform runs two builds, and each composes its own selection of
+    the same manifest; a file counts as reached when either build runs it.
+    """
     selections = []
-    for command in _manifest_commands(platform):
-        selection = _selection_of(command)
-        if selection is not None:
-            selections.append(selection)
+    builds = (False, True) if platform in boxing_platforms() else (False,)
+    for boxing_lane in builds:
+        for command in _manifest_commands(platform, boxing_lane=boxing_lane):
+            selection = _selection_of(command)
+            if selection is not None:
+                selections.append(selection)
     return selections
 
 
@@ -607,7 +615,7 @@ _KNOWN_UNREACHABLE: dict[str, str] = {
     ),
     "tests/integration/ops/test_full_cuda_coverage.py": (
         "exercises the CUDA boxing path: every case asserts that an op "
-        "backends_cuda.conf routes to `cuda` dispatches to the boxing kernel "
+        "backends_nvidia.conf routes to `cuda` dispatches to the boxing kernel "
         "rather than reaching cpu_fallback, and the file's own docstring says "
         "its ops need the external libtorch_cuda.so. The CUDA lane was the only "
         "manifest that selected the `cuda` marker, and it now builds the "

@@ -13,7 +13,7 @@
 - Worktree: `profiler-support`, branch `worktree-profiler-support`
 - Build env: `torch-fl-211` conda env (2.11.0+cpu + external libtorch_cuda cu12.8)
 - Build: set `CUDA_HOME` to the local CUDA toolkit, then run `cmake --build build --target install`
-- Test: `PYTHONPATH=$(pwd) bash scripts/vendor/with_cuda_libtorch.sh python -m pytest ...`
+- Test: `PYTHONPATH=$(pwd) bash scripts/vendor/with_nvidia_libtorch.sh python -m pytest ...`
 - Git: `git -c user.name=lvyufeng -c user.email=lvyufeng@cqu.edu.cn commit`
 - Network: load the locally configured proxy, if needed, before GitHub operations
 - CMake: uses `GLOB_RECURSE` — new files auto-included, deleted files need `rm -rf build; cmake -B build`
@@ -208,7 +208,7 @@ export CPLUS_INCLUDE_PATH=$CUDA_HOME/targets/x86_64-linux/include:$CPLUS_INCLUDE
 conda activate torch-fl-211
 cmake --build build --target install
 
-PYTHONPATH=$(pwd) bash scripts/vendor/with_cuda_libtorch.sh \
+PYTHONPATH=$(pwd) bash scripts/vendor/with_nvidia_libtorch.sh \
   python tests/scratch/verify_correlation_foundation.py
 ```
 
@@ -810,7 +810,7 @@ Expected: clean compile, cupti_device_tracer.cc compiled and linked.
 - [ ] **Step 10: Verify tracer compiles and loads (smoke test)**
 
 ```bash
-PYTHONPATH=$(pwd) bash scripts/vendor/with_cuda_libtorch.sh python -c "
+PYTHONPATH=$(pwd) bash scripts/vendor/with_nvidia_libtorch.sh python -c "
 import torch_fl
 print('torch_fl loaded, CUPTI tracer initialized if available')
 "
@@ -908,7 +908,7 @@ Test: verify baseline comparison shows 13/13 fields present.
 - Create: `tests/data/profiler_cuda_baseline.json` (torch-cuda reference)
 - Create: `tests/data/gen_profiler_baseline.py` (regeneration script)
 - Create: `tests/integration/test_profiler_parity.py` (CI test with `@pytest.mark.main_ops`)
-- Modify: `.github/configs/cuda.yml` (add explicit profiler test entry)
+- Modify: `.github/configs/nvidia.yml` (add explicit profiler test entry)
 
 **Baseline snapshot structure:**
 ```json
@@ -930,7 +930,7 @@ Test: verify baseline comparison shows 13/13 fields present.
 4. `key_averages()` shows `aten::mm` with `self_device_time_total > 0`
 5. Kernel names are demangled (no `_ZN` prefix)
 
-**CI integration:** Add to `.github/configs/cuda.yml` test matrix:
+**CI integration:** Add to `.github/configs/nvidia.yml` test matrix:
 ```yaml
 - name: Profiler parity test
   run: pytest tests/integration/test_profiler_parity.py -v -m main_ops

@@ -881,7 +881,7 @@ def test_musa_flagtree_defaults_to_serial_compile(monkeypatch):
     monkeypatch.setattr(
         "torch_fl.compile.flagtree_shim.flagtree_backend", lambda: "mthreads"
     )
-    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "musa")
+    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "mthreads")
 
     patches = {}
     inductor_backend._patch_vendor_flagtree_compile_workers(patches)
@@ -896,7 +896,7 @@ def test_musa_flagtree_preserves_explicit_compile_threads(monkeypatch):
     monkeypatch.setattr(
         "torch_fl.compile.flagtree_shim.flagtree_backend", lambda: "mthreads"
     )
-    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "musa")
+    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "mthreads")
 
     patches = {"compile_threads": 4}
     inductor_backend._patch_vendor_flagtree_compile_workers(patches)
@@ -976,7 +976,7 @@ def test_musa_flagtree_binds_to_torch_fl_runtime():
     from torch_fl._build_config import ACCELERATOR
     from torch_fl.compile import flagtree_shim
 
-    if ACCELERATOR != "musa":
+    if ACCELERATOR != "mthreads":
         pytest.skip("MUSA build required")
     if (
         not flagtree_shim.is_flagtree_active()
@@ -991,7 +991,7 @@ def test_musa_flagtree_binds_to_torch_fl_runtime():
     assert target is not None
     backend, capability, warp_size = target
     major, minor = flagtree_shim.get_musa_device_capability()
-    assert backend == "musa"
+    assert backend == "mthreads"
     assert capability == major * 10 + minor
     assert warp_size == (32 if major > 2 else 128)
 
@@ -1026,7 +1026,7 @@ def test_musa_flagtree_compiles_forward_backward(device):
     from torch_fl._build_config import ACCELERATOR
     from torch_fl.compile.flagtree_shim import flagtree_backend, is_flagtree_active
 
-    if ACCELERATOR != "musa":
+    if ACCELERATOR != "mthreads":
         pytest.skip("MUSA build required")
     if not is_flagtree_active() or flagtree_backend() != "mthreads":
         pytest.skip("MThreads FlagTree runtime required")
@@ -1051,7 +1051,7 @@ def _skip_unless_gcu(*, needs_triton: bool = True):
 
     Compiling anything on GCU needs a vendor Triton backend for the GCU, which
     the CI image installs as FlagTree (see the FlagTree/FlagGems block in
-    set_env_gcu.sh). Checking the accelerator alone would turn a missing vendor
+    set_env_enflame.sh). Checking the accelerator alone would turn a missing vendor
     Triton stack into a test failure rather than a skip, which matters for a
     build that has no FlagTree -- the native topsaten backend does not need one.
     ``needs_triton=False`` is for the checks that only read torch_fl's own
@@ -1059,10 +1059,10 @@ def _skip_unless_gcu(*, needs_triton: bool = True):
     """
     from torch_fl._build_config import ACCELERATOR
 
-    if ACCELERATOR != "gcu":
+    if ACCELERATOR != "enflame":
         pytest.skip("GCU build required")
     if needs_triton:
-        from torch_fl.accelerator.gcu._gcu_compat import is_gcu_triton_available
+        from torch_fl.accelerator.enflame._gcu_compat import is_gcu_triton_available
 
         if not is_gcu_triton_available():
             pytest.skip("vendor Triton backend required (not installed)")
@@ -1085,6 +1085,13 @@ def test_gcu_device_properties_use_vendor_warp_size():
 
     ``_DeviceProperties`` carries no ``warp_size`` on GCU, and Inductor's default
     is CUDA's. The authority is the Triton driver, since it compiles the kernel.
+
+    The ``type`` asserted here is the driver's **triton** device name, ``gcu`` --
+    not the vendor name ``enflame``. ``platform_profile`` keeps the two apart
+    (``triton_device_type`` vs ``vendor``) because ``props.type`` is also the key
+    ``triton_heuristics`` feeds to ``get_interface_for_device``; asserting the
+    vendor spelling here would have required the profile to report a device type
+    no Triton backend answers to.
     """
     _skip_unless_gcu()
     from torch._inductor.runtime.hints import DeviceProperties
@@ -1300,7 +1307,7 @@ def test_gcu_defaults_to_serial_compile(monkeypatch):
     from torch_fl.compile import inductor_backend
 
     monkeypatch.delenv("TORCHINDUCTOR_COMPILE_THREADS", raising=False)
-    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "gcu")
+    monkeypatch.setattr("torch_fl._build_config.ACCELERATOR", "enflame")
 
     patches = {}
     inductor_backend._patch_vendor_flagtree_compile_workers(patches)
