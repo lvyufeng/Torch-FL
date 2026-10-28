@@ -228,7 +228,16 @@ def capabilities_for_platform(platform: str) -> ProfilerCapabilities:
         # record rather than the platform name for the same reason as the
         # `cuda` marker gate in tests/integration/ops/conftest.py: the two
         # stopped being interchangeable when boxing became an opt-in.
-        memset=device and platform in {"cuda", "metax"} and _boxing_built(),
+        #
+        # DCU is in the set on the same terms: DTK's rocBLAS zeroes its gemm
+        # workspace through hipMemset, and a boxing DCU wheel reaches it the
+        # same way. Measured on bw1100 with the `hygon-boxing` staging
+        # (`KERNELS = ("boxing", "flaggems")`, `backends_hygon_boxing.conf`,
+        # `linalg_lu_factor_ex` on the boxing route): the trace carries 6
+        # `gpu_memset` events. The vendor build still answers False --
+        # `backends_hygon.conf` leaves `linalg_lu_factor_ex` `none`, so the
+        # probe reaches cpu_fallback and no rocBLAS call is made.
+        memset=device and platform in {"cuda", "metax", "dcu"} and _boxing_built(),
         flow=device,
         linkage=device,
         metadata=device,
