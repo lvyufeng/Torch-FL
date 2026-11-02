@@ -17,6 +17,20 @@ import pytest
 pytest_plugins = ("profiler_support", "amp_support")
 
 
+def _require_flagos_device(is_available, init):
+    """Check and initialize the runtime behind the device these cases use."""
+    if not is_available():
+        raise RuntimeError("torch_fl.flagos.is_available() returned False")
+    init()
+
+
+def _initialize_flagos_device():
+    """Prepare flagos:0 without letting its default device pick the outcome."""
+    import torch_fl
+
+    _require_flagos_device(torch_fl.flagos.is_available, torch_fl.flagos.init)
+
+
 # Backend config selection moved fully into torch_fl._select_backend_config(),
 # which reads the build record (the recorded accelerator + the lib/flagos_platform
 # marker) and picks backends_<platform>.conf. conftest no longer pre-empts it: a MetaX
@@ -116,10 +130,14 @@ def pytest_configure(config):
         "markers", "amp_grad_scaler: requires the GradScaler unscale/update routes"
     )
 
-    import torch_fl
-
-    if not torch_fl.flagos.is_available():
-        pytest.exit("flagos device is not available.")
-
-    # Initialize flagos device to ensure ACL runtime is properly set up
-    torch_fl.flagos.init()
+    # Collection runs before this hook, so this check cannot change the node-id
+    # set. A failed setup is an explicit collection error; it is never a skip.
+    # tests/integration/case_gap_issues.py records this required integration
+    # fix and its related skipped cases.
+    try:
+        _initialize_flagos_device()
+    except Exception as exc:  # noqa: BLE001 -- pytest reports setup failure
+        raise pytest.UsageError(
+            f"flagos integration setup failed for flagos:0: {type(exc).__name__}: "
+            f"{exc} (expected case gap #711)"
+        ) from exc

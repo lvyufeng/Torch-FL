@@ -33,6 +33,7 @@ import torch
 import torch_fl  # noqa: F401
 
 from backend_conf import routed_backend_or_none
+from case_gap_issues import case_gap_reason
 
 
 DEVICE = "flagos:0"
@@ -80,7 +81,7 @@ class TestAllCorrectness:
         assert out.item() is False
 
     @pytest.mark.anyplatform
-    @pytest.mark.skip(reason="FlagGems all() kernel cannot handle empty tensors")
+    @pytest.mark.skip(reason=case_gap_reason("#710"))
     def test_all_empty_tensor(self):
         """Empty tensor: all() is vacuously true."""
         a = torch.tensor([], device=DEVICE, dtype=torch.bool)
@@ -98,8 +99,6 @@ class TestAllCorrectness:
 
     @pytest.mark.cuda
     def test_all_matches_cuda(self):
-        if not torch.cuda.is_available():
-            pytest.skip("CUDA not available")
         torch.manual_seed(1)
         a_cuda = torch.randint(0, 2, (64, 64), device="cuda:0", dtype=torch.bool)
         ref = torch.all(a_cuda)
@@ -128,11 +127,10 @@ class TestAllDispatch:
         """The per-op override selects the FlagGems Python path for ``all``.
 
         Skipped where the conf routes ``all`` to ``none``: the op is then not
-        claimed on PrivateUse1 at all, so the call reaches cpu_fallback before
-        the dispatcher and no override can show up in the log.
+        claimed on PrivateUse1 at all, so no override can show up in the log.
         """
         if routed_backend_or_none("all") is None:
-            pytest.skip("all is routed to 'none' on this platform")
+            pytest.skip(case_gap_reason("all:none"))
         result = _run_all_subprocess(
             {
                 "FLAGOS_LOG": "dispatch",
