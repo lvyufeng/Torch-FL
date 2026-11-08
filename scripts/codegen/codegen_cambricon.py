@@ -264,6 +264,8 @@ OPS = {
     "cat": "cat",
     "pow.Tensor_Scalar": "pow",
     "new_ones": "new_ones",
+    "_unsafe_view": "metadata",
+    "transpose.int": "metadata",
     "mm": "matmul",
     "bmm": "bmm",
     "sum.dim_IntList": "sum_dim",
@@ -429,6 +431,32 @@ REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kCambricon, {kernel});
 # operand descriptor.
 # The CNNL entry point each `unary_op` member calls. These take (input, output)
 # and nothing else, which is what lets one body serve them all.
+METADATA_OPS = {
+    # (parameter list, body). Both are expressed in terms of an op this backend
+    # does not claim, so they reach aten's own metadata path rather than a
+    # FlagGems wrapper: `view` and `permute` are both routed to `none` here.
+    "_unsafe_view": (
+        "const at::Tensor& self, at::IntArrayRef size",
+        "return self.view(size);",
+    ),
+    "transpose.int": (
+        "const at::Tensor& self, int64_t dim0, int64_t dim1",
+        """const int64_t rank = self.dim();
+  const int64_t d0 = dim0 < 0 ? dim0 + rank : dim0;
+  const int64_t d1 = dim1 < 0 ? dim1 + rank : dim1;
+  TORCH_CHECK(
+      d0 >= 0 && d0 < rank && d1 >= 0 && d1 < rank,
+      "flagos cambricon: transpose got dims ", dim0, " and ", dim1);
+  std::vector<int64_t> perm(static_cast<size_t>(rank));
+  for (int64_t i = 0; i < rank; ++i) {
+    perm[static_cast<size_t>(i)] = i;
+  }
+  std::swap(perm[static_cast<size_t>(d0)], perm[static_cast<size_t>(d1)]);
+  return self.permute(perm);""",
+    ),
+}
+
+
 HOST_BUILT_OPS = {
     "scalar_tensor": (
         "const at::Scalar& s, std::optional<at::ScalarType> dtype_opt,\n    std::optional<at::Layout> layout_opt, std::optional<at::Device> device_opt,\n    std::optional<bool> pin_memory_opt",
@@ -964,6 +992,19 @@ at::Tensor {kernel}(
     result.fill_(1);
   }}
   return result;
+}}
+
+REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kCambricon, {kernel});
+
+"""
+
+T_METADATA = """\
+at::Tensor {kernel}({params}) {{
+  // A metadata-only op. FlagGems serves these with a Python wrapper, which
+  // measured 13.6 us against the 2.8 us aten's own path costs for `view` -- the
+  // wrapper is the entire cost, because there is no kernel to run. Paid 42 times
+  // a forward for _unsafe_view alone.
+  {body}
 }}
 
 REGISTER_IMPL_TO_DISPATCHER({fn}, {disp}, Backend::kCambricon, {kernel});
@@ -2087,6 +2128,15 @@ def render():
             body = T_EMBEDDING.format(kernel=kernel, fn=fn, disp=disp, op=op)
         elif category == "cumsum":
             body = T_CUMSUM.format(kernel=kernel, fn=fn, disp=disp, op=op)
+        elif category == "metadata":
+            params, body = METADATA_OPS[op]
+            body = body.format(kernel=kernel)
+            body = "\n".join(
+                ("  " + ln) if ln else ln for ln in body.split("\n")
+            )
+            body = T_METADATA.format(
+                kernel=kernel, fn=fn, disp=disp, op=op, params=params, body=body
+            )
         elif category == "new_ones":
             body = T_NEW_ONES.format(kernel=kernel, fn=fn, disp=disp, op=op)
         elif category == "pow":
