@@ -197,7 +197,7 @@ def get_kunlunxin_current_raw_stream(device: Any = None) -> int:
     from torch_fl.compile.device_interface import FlagOSDeviceInterface
 
     index = int(FlagOSDeviceInterface._vendor_device(device))
-    return flagos.current_stream(index).handle
+    return flagos.current_stream(index).mlu_stream
 
 
 def get_iluvatar_current_raw_stream(device: Any = None) -> int:
