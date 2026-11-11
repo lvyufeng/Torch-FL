@@ -35,6 +35,9 @@
 #if defined(USE_MPS)
 #include "backends/apple/mps_copy.h"
 #endif
+#if defined(USE_CAMBRICON)
+#include "backends/cambricon/cambricon_copy.h"
+#endif
 
 #if defined(FLAGOS_MUSA_KERNEL)
 #include "backends/mthreads/mudnn_common.h"
@@ -938,6 +941,13 @@ at::Tensor _to_copy(
       // declines pairs its kernel was measured wrong for, and those keep the
       // CPU round trip below.
       result = iluvatar::DtypeCast(self_contig, dtype);
+#endif
+#ifdef USE_CAMBRICON
+      // Cambricon casts on device through cnnlCastDataType. Without it every
+      // dtype change is a D2H -> CPU cast -> H2D round-trip: 1714 us for
+      // float32 -> float16 on (2048, 1024) against 15.89 us for the vendor
+      // call, and the Qwen3 step issues 38 `.to()` calls.
+      result = cambricon::DtypeCast(self_contig, dtype);
 #endif
       if (!result.defined()) {
         // Fallback: CPU round-trip when no on-device cast is available
