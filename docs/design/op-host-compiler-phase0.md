@@ -644,6 +644,61 @@ the cache and the last one found is not the one the Python launch used, and that
 is already a wrapped handle in this build rather than a plain integer. Neither has been
 tested yet, so no timing is claimed.
 
+### The direct launch, measured
+
+Getting here took three corrections, each of which is now recorded above: the stream must come
+from the plugin's registry rather than from `torch.cuda`, the build has to be the one that
+exports `GetCurrentStreamForDevice`, and the submission has to target the registry's stream
+rather than the default one. With all three, a direct `cuLaunchKernel` returns `rc = 0`,
+produces a result equal to the reference, and repeats.
+
+Timing, five independent processes, twenty launches each, synchronisation outside the timed
+region:
+
+| run | median (us) | min (us) |
+| --- | ---: | ---: |
+| 1 | 5.92 | 5.45 |
+| 2 | 6.06 | 5.56 |
+| 3 | 5.96 | 5.35 |
+| 4 | 5.95 | 5.55 |
+| 5 | 6.02 | 5.47 |
+
+**About 6.0 us, against the Triton Python launcher's 15.43 us** for the same kernel, same
+grid, same stream. And that 6.0 is a Python-side figure: it includes a ctypes call and
+parameter packing, so the C++ equivalent is lower - #820 measured 4.33 us for its C++ path on
+a different operator, which is the right order.
+
+Why the number needed five processes: twenty launches in one process are fine, and the process
+segfaults somewhere past that when the same submission is repeated a few hundred times. That
+is a property of this harness, not of the ABI - it takes a stream from the plugin's registry
+while torch's allocator and the plugin's own bookkeeping know nothing about the raw launches -
+and it is not resolved. Reporting per-process medians avoids it without hiding it.
+
+### Where the budget now stands
+
+| arm | CPU submission (us) | measured |
+| --- | ---: | --- |
+| FlagGems Python wrapper | 24.07 | yes |
+| parameterised host program, still Python | 20.67 | yes |
+| Triton Python launcher alone | 15.43 | yes |
+| **direct cuLaunchKernel, via ctypes** | **6.0** | yes |
+| `torch.empty_like` on `flagos` | 3.34 | yes |
+| vendor `torch.softmax` on `cuda:0` | 8.95 | yes |
+
+So the two costs the host program has to pay are now both measured: about 6.0 us to submit the
+kernel from Python today, and 3.34 us to allocate. Together that is 9.34 us, which is already
+within the vendor operator's 8.95 us plus or minus the harness overhead, before any of the
+three planned improvements land:
+
+- a C++ submission path instead of ctypes (#820's 4.33 us is evidence it goes lower);
+- an allocation fast path, 3.34 us towards 1.0-1.5 us;
+- the parameterised host program removing the remaining wrapper and glue work.
+
+The parity arithmetic from the design therefore survives contact with measurement, which is
+the useful outcome of this gate: skipping the Python launcher is worth about 9.4 us on this
+operator and is reusable across every operator and every shape class, while allocation is
+worth about 2 us and equally universal.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
