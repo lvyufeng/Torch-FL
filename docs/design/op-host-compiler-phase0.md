@@ -589,6 +589,61 @@ This also gives the ABI adapter its next two steps in order: submit on the regis
 and own the parameter block for the launch's lifetime - then measure, and separately confirm
 the twenty-launch success is stable over hundreds.
 
+### The cloned environment and the merged build
+
+Following the stream problem, a copy of the configured environment was made rather than
+modifying it: `torch-fl-hc` is a `conda create --clone` of `torch-fl-h100-py312`, and the
+tree carrying the stream registry was built and installed into the copy.
+
+Building it took three attempts, each failing for a different and instructive reason:
+
+1. **Staging the CUDA assets during the build aborts the build itself**, with the same
+   `Duplicated key 'graph_capture_record_stream_reuse'` seen at run time. The build
+   interpreter is a CUDA torch, so its `libc10_cuda.so` already registers the allocator hook
+   and the staged copy registers it a second time. The build has to run with
+   `FLAGOS_DISABLE_CUDA_ASSETS=1` and no `FLAGOS_CUDA_ASSETS_DIR`.
+2. **`TORCH_DEVICE_BACKEND_AUTOLOAD=0` is required** even for `setup.py`, because setup
+   imports torch to locate it, and the autoload entry point drags in `flagcx`.
+3. With those, `bdist_wheel` completes and the installed library exports the entry point:
+
+```text
+KERNELS = ("boxing", "flaggems", "tileops", "vendor")
+$ nm -D --defined-only libflagos.so | grep -c GetCurrentStreamForDevice
+1
+```
+
+The registry stream is then reachable from Python, which is what the earlier attempt against
+the older wheel could not do:
+
+```text
+registry stream: 0x563cc46dba20
+```
+
+### Where the measurement now stops
+
+Submitting through `cuLaunchKernel` against that build segfaults on the first call, and the
+diagnostic run narrows it to the handle rather than to the stream:
+
+```text
+registry stream: 0x563f67782760 | torch stream: 0x0
+python launch ok
+  trying stream default(0) = 0x0
+<segfault>
+```
+
+`torch.cuda.current_stream().cuda_stream` is `0`, so the plugin's aliased stream object still
+carries no CUDA handle, and the registry stream is the only real candidate. But the crash
+happens on the first submission regardless of the stream value, which points at the
+`CUfunction` handle or at the `cuLaunchKernel` signature in the prototype rather than at
+stream selection: the same code returned `rc=0` and correct results twenty times against the
+previous build, so what changed is the build, and with it the value `walk()` finds in
+`kernel_cache`.
+
+Two concrete hypotheses remain, both cheap to test: that several compiled kernels now live in
+the cache and the last one found is not the one the Python launch used, and that `function`
+is already a wrapped handle in this build rather than a plain integer. Neither has been
+tested yet, so no timing is claimed.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
