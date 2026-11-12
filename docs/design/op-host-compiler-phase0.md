@@ -973,6 +973,39 @@ entry all exist and build; the custom-operator path through the same code measur
 with correct results; and an ordinary eager `a * b` reaches the hook and is declined for a
 reason the current code does not report.
 
+### The hook is placed correctly and still is not called
+
+Adding per-stage counters (`hits`, `no_plan`, `not_eligible`, `launch_failed`,
+`last_cuda_error`) was meant to show why the decline happened. Every counter stayed at zero
+after an ordinary `a * b`, including `no_plan`, which is the one that increments when the
+operator has no registered plan. That result rules out the two candidates the previous section
+listed: the hook is not declining, it is not being reached.
+
+The obvious explanation - the hook sitting in the wrong function - was checked and is not it.
+The generated kernel for this operator does call the generic entry point:
+
+```text
+at::Tensor MulTensorKernelPython(const at::Tensor & self, const at::Tensor & other) {
+  auto result = CallPythonOp_Generic("flag_gems.mul", {self, other});
+```
+
+and the hook is the first thing `CallPythonOp_Generic` does after the replay lookup. The typed
+helper `CallPythonOp_TT` was hooked as well, on the theory that a pointwise operator might
+bypass the generic path - it does not fix anything, which is itself evidence, since a call
+through it would have moved a counter.
+
+So the hook is in the right place and the operator's generated kernel is not what runs. Two
+possibilities remain and they are easy to separate: either `a * b` resolves to a different
+implementation for `aten::mul.Tensor` in this build - the boxing kernel set registers the same
+operator - or the FlagGems kernel is selected but the counters are being read from a different
+translation unit's copy of the state, which the file-scope placement should have prevented but
+was never verified.
+
+The next check is therefore a fact about the build rather than about the host program: dump
+which implementation the dispatcher holds for `aten::mul.Tensor` in this wheel, and confirm the
+counters' storage is shared with the library the Python side is talking to. Both are
+observations, not code changes.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
