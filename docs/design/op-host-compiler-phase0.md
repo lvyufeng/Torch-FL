@@ -564,6 +564,31 @@ in Python-owned memory reused across iterations, neither of which a real adapter
 The next step is to submit on the stream the plugin's own registry reports, with the
 parameter block owned for the lifetime of the launch, and only then measure.
 
+### Why the direct-launch timing is still not measured
+
+Two attempts to stabilise the measurement both failed for concrete, recorded reasons.
+
+`torch.cuda.current_stream().cuda_stream` is not usable here: in this environment `torch.cuda`
+is the plugin's alias, and the current-stream object it returns has no CUDA handle to read
+(`None`). That is the correct behaviour for an aliased device, not a bug.
+
+The stream therefore has to come from the plugin's own registry - which is exactly what
+`GetCurrentStreamForDevice` is for, the entry point added for the CPU-torch contract. But the
+wheels installed in this environment predate it:
+
+```text
+AttributeError: .../torch_fl/lib/libflagos.so: undefined symbol: GetCurrentStreamForDevice
+```
+
+`register.cc:563` in that library is an older tree than the merged `6f765952`, so the symbol
+is absent. Getting the number therefore requires installing a build of the merged tree into
+this environment, or running the measurement where such a build already exists. Neither was
+done here, so no timing is reported.
+
+This also gives the ABI adapter its next two steps in order: submit on the registry's stream,
+and own the parameter block for the launch's lifetime - then measure, and separately confirm
+the twenty-launch success is stable over hundreds.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
