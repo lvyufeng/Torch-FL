@@ -261,6 +261,59 @@ and `softmax` shows that a second, unrelated CUDA-initialising call also has to 
 intercepted. Both are still adapter work, but there are now two call sites to intercept
 rather than one, and the capture-time behaviour is the one that has to be proven.
 
+## Gate 2: the capture shim works, and the Triton launch is still outside the graph
+
+The three blockers identified earlier were addressed with a capture-time device shim
+(`benchmarks/host_compiler/flagos_capture_shim.py`) and re-probed with
+`benchmarks/host_compiler/capture_probe.py --shim`.
+
+The naive patch - replacing `torch.cuda.device` on the module - is not sufficient, and the
+reasons are the useful part of this result:
+
+1. **Dynamo special-cases the call.** Tracing routes `with torch_device_fn.device(x)` to
+   `CUDADeviceVariable`, which calls `torch.cuda._get_device_index` directly and raises
+   `ValueError: Expected a cuda device, but got: flagos:0` before any attribute lookup
+   matters. Patching the module attribute changes nothing.
+2. **`torch.cuda.device` must stay a class.** torch_fl's accelerator compat layer does
+   `isinstance(device, torch.cuda.device)` while resolving device properties; substituting a
+   plain function raises `TypeError: isinstance() arg 2 must be a type, a tuple of types, or
+   a union`.
+3. **FlagGems binds its handle at import time.** Every module that did
+   `from flag_gems.runtime import torch_device_fn` holds its own reference, so the shim
+   rebinds all of them - 297 modules on the pinned stack - rather than the single runtime
+   module.
+
+With all three in place the result changes qualitatively:
+
+| case | before the shim | with the shim |
+| --- | --- | --- |
+| `mul` 32x64 | failed at FlagGems' `torch_device_fn.device(...)`, no graph | **captured, 1 graph, result equals the CPU reference** |
+| `softmax` (2,128,4096) `dim=-1` | failed at the same place | captured, then failed executing the captured graph |
+
+`mul`'s captured graph contains only `torch.empty`, `broadcast_shapes` and the output. **The
+Triton launch is not in it** - it became an opaque call that Dynamo could not take into the
+graph. So gate 2 is *partially* met: the host logic above the launch (allocation, shape
+arithmetic, broadcasting) is captured, and the launch itself is not. By this gate's own
+criterion - "a concrete launch snapshot or an opaque Python call fails this gate" - `mul`
+has not passed yet. The missing piece is a `wrap_triton`-equivalent so the Triton call enters
+the traced path instead of becoming a graph break.
+
+`softmax` is a separate story. Its capture succeeds as far as Dynamo is concerned, and the
+failure happens in the *generated* graph:
+
+```text
+File "<eval_with_key>.4", line 6, in forward
+    out = torch.empty_like(l_self_, dtype = torch.float32)
+RuntimeError: Cannot initialize CUDA without ATen_cuda library. ...
+```
+
+That is the CPU-torch `empty_like` gap already recorded above, reached through the graph's
+allocation rather than through the operator's own code. So `softmax`'s host logic -
+including the dtype upcast to float32 and the allocation - is captured, and what blocks it is
+an allocation path that needs a CUDA-initialising call. The two operators fail for
+independent reasons: `mul` needs the launch exposed, `softmax` needs `empty_like` to work
+under CPU torch.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
@@ -268,12 +321,16 @@ wrappers, ABI or codegen. Partial, three cases:
 
 | operator | expressions | control flow | wrappers | ABI | verdict so far |
 | --- | --- | --- | --- | --- | --- |
-| `mul` | not yet reached | complex/broadcast branch visible in source | `pointwise_dynamic` generated callee | not yet reached | blocked by device-context shim; host logic traversable |
-| `softmax` inner | not yet reached | `numel() == 0` branch, dtype selection | hand-written wrapper | not yet reached | same blocker |
-| `softmax` non-inner | as above | as above | as above | not yet reached | same blocker |
+| `mul` | captured: `broadcast_shapes` is in the graph; sizes are not yet symbolic | complex/broadcast branch resolved to one path | `pointwise_dynamic` callee traced through | not reached | host logic captured; **Triton launch left the graph as an opaque call** |
+| `softmax` inner | captured, including the float32 upcast | `numel() == 0` branch not exercised | hand-written wrapper traced through | not reached | host logic captured; blocked by `empty_like` at execution, not at capture |
+| `softmax` non-inner | as above | as above | as above | not reached | not re-probed with the shim |
+| reduction (multi-launch) | not probed | not probed | not probed | not reached | not probed |
+| multi-output (`max.dim`) | not probed | not probed | not probed | not reached | not probed |
 
 No case has reached the ABI layer yet, so nothing is known about the kernel parameter
-mapping in this configuration.
+mapping in this configuration. The two probed operators fail for different reasons, which is
+the useful shape of this table: one needs the launch exposed to tracing, the other needs an
+allocation path that does not initialise CUDA.
 
 ## Next
 
