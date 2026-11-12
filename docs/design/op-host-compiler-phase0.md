@@ -935,6 +935,44 @@ Until that is done the `mul` host program is not registered, and the hook remain
 only up to the point recorded above: it exists, it compiles, it is consulted before Python, and
 the custom-operator path through the same code measures 10.35 us with correct results.
 
+### The hook reaches `mul` but declines it, and the decline is silent
+
+`mul.Tensor` is `flaggems` in the conf this build actually loads (`backends_nvidia.conf`, line
+1474), and the eager timing confirms the FlagGems kernel is the one running: `torch.mul` at
+54.9 us against the wrapper's 50.6 us is the wrapper plus a dispatch, not some other path. So
+unlike `softmax`, this call does reach `CallPythonOp_Generic` with `"flag_gems.mul"` - the name
+the host program is registered under.
+
+And yet the hit counter stays at zero:
+
+```text
+registered: true
+hits_delta: 0
+hits_total: 0
+eager_correct: true
+```
+
+Since the host program only increments the counter when it returns a defined tensor, and the
+call still produces correct results, the program is being consulted and returning undefined -
+the caller then runs the Python route exactly as designed. That is the failure mode this design
+asked for, but it means the decline is silent, and silent declines are not diagnosable.
+
+Two candidates, in order of likelihood: the pointwise launch itself is rejected by the driver
+(a wrong `n_elements` width or a `BLOCK_SIZE` that does not match the grid the kernel was
+compiled for both fail the same way, and `BLOCK_SIZE` was taken as 1024 without being read out
+of the compiled kernel), or a guard in `TryPointwiseBinary` is refusing the call.
+
+That distinction cannot be made from outside, which is the actionable finding: the next change
+is not more host-program logic but observability in it - a counter per decline stage (not
+eligible, size mismatch, launch failed with which code), exposed alongside the hit counter. The
+design already asks for "misses with reasons" in its cache section; the hook needs the same
+thing before its behaviour can be trusted or measured.
+
+Status, precisely: the registry, the parameterised host program, the caller hook and the mul
+entry all exist and build; the custom-operator path through the same code measures 10.35 us
+with correct results; and an ordinary eager `a * b` reaches the hook and is declined for a
+reason the current code does not report.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
