@@ -892,6 +892,49 @@ already routes to FlagGems - `mul.Tensor` is `flaggems` in this conf - which tes
 mechanism (registry lookup, guard, metadata-derived geometry, native allocate and submit)
 without depending on how `softmax.int` is wired.
 
+### Reaching the hook through `mul`
+
+`mul.Tensor` is `flaggems` in this conf, so it is the operator to use for finishing the hook
+validation. Its ABI was discovered the same way as softmax's, and it is less friendly.
+
+The kernel is a `LibEntry` that is not reachable from the operator module by name - the
+`pointwise_dynamic` factory builds the callable, and `mul_broadcast_func` is not even a
+module-level name (`NoneType` when looked up). Searching the `flag_gems` module tree for
+objects holding a compiled kernel finds it:
+
+```text
+flag_gems.ops.mul.mul_kernel   LibEntry
+arg_names: x_ptr, y_ptr, output_ptr, n_elements, dtype, BLOCK_SIZE, IS_BOOL
+num_warps: 4    shared: 0    function: 0x55db7be2b5e0
+```
+
+and the host logic around it is:
+
+```python
+n_elements = output.numel()
+if n_elements == 0: return output
+grid = lambda meta: (triton.cdiv(n_elements, meta["BLOCK_SIZE"]),)
+with torch_device_fn.device(output.device):
+    mul_kernel[grid](a_t, b_t, output, n_elements,
+                     dtype=_dtype_name(dtype),
+                     IS_BOOL=_is_bool_dtype(dtype))
+```
+
+Two of those arguments are not like softmax's. `IS_BOOL` is a constexpr, and `dtype` is passed
+as a **string** from `_dtype_name(dtype)` - in Triton a string argument is a compile-time
+specialisation, so it cannot be a runtime parameter. That implies the runtime parameter list is
+the three pointers plus `n_elements`, with `dtype` and `IS_BOOL` folded into the compiled
+kernel, but that is an inference and not a measurement.
+
+It should not be acted on without checking, and the check is cheap: read the compiled kernel's
+parameter description rather than inferring it from `arg_names`, which lists the source-level
+signature and not the runtime one. `metadata.signature` came back empty in the probe, so the
+next attempt should read `packed_metadata` and the kernel's parameter list directly.
+
+Until that is done the `mul` host program is not registered, and the hook remains validated
+only up to the point recorded above: it exists, it compiles, it is consulted before Python, and
+the custom-operator path through the same code measures 10.35 us with correct results.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
