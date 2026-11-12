@@ -528,6 +528,42 @@ and every shape class, whereas the host-program lowering is the per-operator, in
 part. It also means the first end-to-end native prototype should be
 "native launch + fast allocation + parameterised metadata", not "full IR first".
 
+## The kernel ABI adapter: a direct launch works
+
+The decomposition says the Python Triton launcher costs 15.43 us against the 4.33 us a
+direct C++ launch costs, so the ABI path was worth prototyping first. For `softmax`'s inner
+kernel the whole ABI turns out to be small:
+
+```text
+arg_names:  output_ptr, input_ptr, M, N, TILE_N: constexpr, ONE_TILE_PER_CTA: constexpr
+num_warps:  16      shared: 64      block: 512
+```
+
+So two pointers and two int32s are passed per launch and the two tile parameters are baked
+into the compiled kernel. The compiled kernel is reachable from FlagGems' handle without
+recompiling: `softmax_kernel_inner` is a `LibEntry`, whose `kernel_cache` is a tuple holding
+the Triton `CompiledKernel`, which carries `metadata` (num_warps, shared, signature) and
+`function`, the `CUfunction` handle.
+
+Launching that handle through `cuLaunchKernel` with a hand-packed parameter array works:
+
+```text
+warm ok, matches: True
+```
+
+The result is correct against the reference and stays correct over twenty consecutive
+launches, so the adapter's functional half is established: the parameter mapping can be
+recovered from what Triton produced, and the kernel can be submitted without Triton's Python
+launcher.
+
+**No timing number is claimed.** The measurement loop segfaults after the warm-up passes -
+twenty launches are fine, and the process dies once the same call is repeated a few hundred
+times in a tight loop. That points at the submission path rather than at the ABI: the
+prototype takes its stream from `torch.cuda.current_stream()` and keeps the parameter array
+in Python-owned memory reused across iterations, neither of which a real adapter would do.
+The next step is to submit on the stream the plugin's own registry reports, with the
+parameter block owned for the lifetime of the launch, and only then measure.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
