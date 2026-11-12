@@ -314,6 +314,49 @@ an allocation path that needs a CUDA-initialising call. The two operators fail f
 independent reasons: `mul` needs the launch exposed, `softmax` needs `empty_like` to work
 under CPU torch.
 
+## Correction: the CPU-torch configuration is a supported, CI-tested shape
+
+The sections above describe CPU-torch results obtained with the wheel that happened to be
+installed in the venv used for probing, which is an **rc2 boxing build**
+(`KERNELS = ("boxing", "flaggems", "tileops", "vendor")`). That wheel is not the shape this
+configuration is meant to run, and two conclusions drawn from it have to be narrowed.
+
+The repository's NVIDIA lane already runs CPU torch as its default. From
+`.github/scripts/hooks/set_env_nvidia.sh`:
+
+- the vendor lane installs `torch==$CPU_TORCH_VERSION` from the `whl/cpu` index, so the
+  interpreter under test has no CUDA torch;
+- the wheel that lane builds is the FlagGems-primary one, with boxing off;
+- and its own note states that "a boxing wheel runs on the stock +cpu torch exactly as the
+  vendor lane does", which is why the two lanes share the CPU-torch interpreter.
+
+So "CPU torch cannot run an operator" was never the right reading of the earlier failure.
+What the earlier probes actually measured is: an rc2 **boxing** wheel on CPU torch reports
+`Cannot initialize CUDA` for `randn` and `empty_like`, and works for `empty`/`zeros`/copies
+and for `flag_gems.mul`. That is a statement about a boxing wheel, not about the supported
+configuration.
+
+There is one real constraint worth recording, because it is not obvious from the wheel names:
+
+| wheel on disk | `KERNELS` | loads on CPU torch alone |
+| --- | --- | --- |
+| `sandbox/wheels/...` (the probed one) | boxing, flaggems, tileops, vendor | yes, via the alias |
+| `torch-fl-pr537/dist/...` | flaggems, tileops, vendor | **no** - needs `libtorch_cuda.so` |
+| `torch-fl-ci-unify/worktree-05992be2/dist/...` | flaggems, tileops, vendor | **no** - needs `libtorch_cuda.so` |
+
+Neither boxing-off wheel imports without `libtorch_cuda.so`, and the CI satisfies that by
+staging the library out of the vendor torch into `FLAGOS_CUDA_ASSETS_DIR` - the same variable
+`work/env-torch-fl.sh` exports on this host. So the supported CPU-torch shape is *CPU torch
+wheel plus staged CUDA assets plus the boxing-off wheel*, not "no CUDA library anywhere".
+Installing a boxing-off wheel into a bare CPU-torch venv fails at
+`import torch_fl._C` with `libtorch_cuda.so: cannot open shared object file`.
+
+Consequence for the gates: gate 3 has to be run in the CI-shaped environment, with the
+staging step done, rather than in the ad-hoc venv used here. The capture results above are
+unaffected in kind - they were obtained through the ATen dispatcher on a real `flagos`
+device - but `softmax`'s `empty_like` failure should be re-checked against the boxing-off
+wheel before it is treated as a property of the supported configuration.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
