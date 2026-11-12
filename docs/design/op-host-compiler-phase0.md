@@ -1039,6 +1039,53 @@ last entry, or count per name. That was the intent of the unused `EntryName` in 
 is the one missing observation. Until it is read, "the hook is not called" and "the hook is
 called for a different operator" remain indistinguishable, and the latter is better supported.
 
+### The hook fires, and the `mul` launch takes the process down
+
+Two findings, in the order they were established, and the second one changes what "the hook"
+means.
+
+**The hook was behind a guard that had nothing to do with it.** Per-operator entry accounting
+showed `flag_gems.mul=1` reaching the caller while `hook_consulted=0` - both in the same
+function, which is only possible if an intervening condition is false. Reading the code showed
+it: the host-program lookup had been placed inside `if (HasFastPlan(func_name))`, the check for
+a captured replay plan. A host program derives its geometry from the current call's metadata and
+depends on nothing being captured, so that guard was wrong - the lookup belongs outside it, as
+the typed-helper path already had it. Every earlier conclusion that treated the caller as "not
+reached" was reading a guarded path as if it were unconditional.
+
+With the lookup moved out, an ordinary `a * b` enters the host program. That is now certain
+because it crashes there:
+
+```text
+STEP new kernels: 1 total: 1
+STEP chosen fn: 0x55b4192db250 warps: 4 shared: 0
+STEP registered: True
+STEP doing a * b
+<segfault>
+```
+
+**The launch crashes rather than declining.** One compiled kernel exists in this process after a
+single float32 call, so the specialisation is the right one - an earlier attempt had picked a
+`bool` specialisation from the same `LibEntry`, which would explain an out-of-bounds write on a
+float32 buffer, and this run removes that confound. Three grid assumptions were tried
+(`BLOCK_SIZE` 512, 1024, 2048) and all three crash at the same point.
+
+So the remaining defect is inside the pointwise launch itself, and the candidates are narrow:
+the kernel's runtime argument layout for `mul_kernel` is not the three pointers plus an element
+count that the source signature implies (its `dtype` argument is a string, hence a compile-time
+specialisation, and whether that shifts anything else is unverified), or the launch re-enters the
+dispatcher from `at::empty_like` while the plugin's own `mul` frame is active.
+
+The measurement lesson from this stretch is worth recording too: every crash here produced no
+output because results were printed once at the end. The runs that made progress printed after
+each step. Diagnostic scripts should flush per step and take one variable per process, which is
+what turned this from "it segfaults" into a specific line.
+
+Status, precisely: an ordinary eager `a * b` now reaches the parameterised host program - the
+first time the whole chain has been exercised - and the pointwise launch is the one piece that
+does not work yet. The softmax path through the same registry machinery measured 10.35 us with
+correct results via its probe operator.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
