@@ -484,6 +484,50 @@ keeps the arithmetic from the design intact: removing the Python wrapper and kee
 4.4 us allocation lands near 9-10 us, and bringing the allocation down is what moves it
 toward the vendor's 8.95.
 
+## The first host program, and what its decomposition changes
+
+A host program for `softmax` was written by hand as the shape a compiler must produce:
+metadata expressions only, no baked dimensions, no baked grid, no pooled output. One program
+served six shapes - `(2,128,4096)`, `(3,7,1024)`, `(64,512)`, `(1,1000)`, `(5,3,257)`,
+`(8,64,64,96)` - with the grid recomputed each time (256, 21, 64, 1, 15, 32768), every result
+matching the reference, all on `flagos:0`. That is the property the replay plan lacks: one
+artifact, many sizes.
+
+The guard written for it was `rank == 3`, and the program then ran correctly on rank 2, 3 and
+4. The guard was over-specialised: what the program actually requires is "contiguous, dtype,
+and the reduction dim is the last one", not a rank. Recording it because guard design is
+where a compiler can silently destroy reuse.
+
+The decomposition is the more important result:
+
+| arm | CPU submission (us) |
+| --- | ---: |
+| FlagGems Python wrapper | 24.07 |
+| parameterised host program, still in Python | 20.67 |
+| **the Triton kernel launch alone, no allocation** | **15.43** |
+| `torch.empty_like` on `flagos` | 3.34 |
+| vendor `torch.softmax` on `cuda:0` | 8.95 |
+
+Removing the wrapper's own work - the debug logging, the assertions, the repeated dim
+normalisation, `contiguous()`, the `resize_` checks and the device context manager - is worth
+only about 3.4 us. **The Triton Python launcher costs 15.43 us**, which dominates everything
+else and is larger than the entire vendor operator. `20.67` is consistent with
+`15.43 + 3.34` plus a little glue.
+
+So the strategy that follows from the numbers is not "compile the host logic first". Against
+the vendor's 8.95 us, the removable costs rank:
+
+1. **the Python Triton launcher: about 11 us.** #820 already measured a direct C++ launch at
+   4.33 us, so a native launch is worth roughly 11 us here.
+2. **allocation: about 2 us**, from 3.34 down to a fast path's 1.0-1.5.
+3. **the remaining host logic: about 3 us**, which is what host compilation addresses.
+
+That reorders the work relative to a plain reading of the design: the kernel ABI adapter and
+the allocation fast path carry most of the win, and both are reusable across every operator
+and every shape class, whereas the host-program lowering is the per-operator, incremental
+part. It also means the first end-to-end native prototype should be
+"native launch + fast allocation + parameterised metadata", not "full IR first".
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
