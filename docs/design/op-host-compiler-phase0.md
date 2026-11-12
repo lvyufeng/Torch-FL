@@ -398,6 +398,62 @@ This also explains the wheels already on disk: the two boxing-off wheels that fa
 import are builds whose torch was a CUDA torch, so they carry the dependency this lane is
 supposed to avoid.
 
+## The working environment, and gate 2 passing for softmax
+
+Everything above that used `verify-rc2-cuda/venv` was measured in an environment that is not
+the configured one. The configured environment on this host is the conda environment whose
+name carries it, `torch-fl-h100-py312`, driven through the workspace wrapper:
+
+```bash
+docker exec -e TORCH_FL_ENV=torch-fl-h100-py312 -e FLAGOS_DISABLE_CUDA_ASSETS=1 \
+  lvyufeng-torch-fl /public-nvme/lvyufeng/work/with-flagos.sh python probe.py
+```
+
+`FLAGOS_DISABLE_CUDA_ASSETS=1` is required, and the reason is worth recording because the
+failure does not look like a configuration problem:
+
+```text
+terminate called after throwing an instance of 'c10::ValueError'
+  what(): Duplicated key 'graph_capture_record_stream_reuse' found in device-specific
+  configuration parser hook registration
+Exception raised from registerDeviceConfigParserHook at c10/core/AllocatorConfig.h:266
+```
+
+That environment has a CUDA torch, so it already provides `libc10_cuda.so`; the wrapper's
+`FLAGOS_CUDA_ASSETS_DIR` makes the plugin preload a second staged copy, and the second
+registration of the allocator-config hook aborts the process. With the preload disabled the
+environment is clean:
+
+| check | result |
+| --- | --- |
+| `torch.__version__` | `2.10.0+cu130`, `torch.version.cuda` is `13.0` |
+| `import torch_fl` | ok, `privateuse1` is `flagos` |
+| `torch.empty` / `torch.randn` on `flagos:0` | ok |
+| `a * b` through the dispatcher | ok, `flagos:0`, correct value |
+
+### Gate 2, with and without the shim
+
+The same probe, in this environment, run both ways. The comparison is the useful part: it
+settles whether the capture shim is a workaround for a broken environment or a real
+requirement.
+
+| case | without shim | with shim |
+| --- | --- | --- |
+| `mul` 32x64 | fails at `torch_device_fn.device(output.device)`, no graph | captured, 1 graph, result equals CPU reference, **launch not in the graph** |
+| `softmax` (2,128,4096) `dim=-1` | fails at `torch_device_fn.device(self.device)`, no graph | **captured, 2 graphs, `triton_kernel_wrapper_mutation` present, result equals CPU reference** |
+
+So the shim is required in the configured environment too - the device-context blocker is a
+property of FlagGems' launch path on the `flagos` device, not of the earlier venv - and with
+it **gate 2 passes for `softmax`**: a real FlagGems operator's host logic was captured with
+its Triton kernel call inside the graph, and the captured path produces the same result as
+the reference.
+
+`mul` still does not pass: its graph holds `torch.empty`, `broadcast_shapes` and the output,
+while the launch becomes an opaque call. The two operators differ in how the launch is
+reached, which is why one lands inside the graph and the other does not - `softmax` goes
+through the Triton wrapper that Dynamo can take into the graph, while `mul`'s
+`pointwise_dynamic` callee launches in a way Dynamo leaves as a call.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
@@ -406,7 +462,7 @@ wrappers, ABI or codegen. Partial, three cases:
 | operator | expressions | control flow | wrappers | ABI | verdict so far |
 | --- | --- | --- | --- | --- | --- |
 | `mul` | captured: `broadcast_shapes` is in the graph; sizes are not yet symbolic | complex/broadcast branch resolved to one path | `pointwise_dynamic` callee traced through | not reached | host logic captured; **Triton launch left the graph as an opaque call** |
-| `softmax` inner | captured, including the float32 upcast | `numel() == 0` branch not exercised | hand-written wrapper traced through | not reached | host logic captured; blocked by `empty_like` at execution, not at capture |
+| `softmax` inner | captured, including the float32 upcast | `numel() == 0` branch not exercised | hand-written wrapper traced through | not reached | **captured with the Triton call in the graph; gate 2 passes** |
 | `softmax` non-inner | as above | as above | as above | not reached | not re-probed with the shim |
 | reduction (multi-launch) | not probed | not probed | not probed | not reached | not probed |
 | multi-output (`max.dim`) | not probed | not probed | not probed | not reached | not probed |
