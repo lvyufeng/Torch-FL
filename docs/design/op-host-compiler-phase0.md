@@ -699,6 +699,43 @@ the useful outcome of this gate: skipping the Python launcher is worth about 9.4
 operator and is reusable across every operator and every shape class, while allocation is
 worth about 2 us and equally universal.
 
+## The allocation "4 us" is mostly not allocation
+
+The plan carried a number through several rounds - `torch.empty` on `flagos` costs about
+4 us, therefore an allocation fast path is worth about 2 us and is universal. Measuring the
+components instead of the total corrects it.
+
+| measurement | us |
+| --- | ---: |
+| `torch.empty` 4 MiB on `flagos` | 4.10 |
+| `torch.empty` 1 element on `flagos` | 3.97 |
+| `torch.empty` 1 MiB on `flagos` | 3.99 |
+| `torch.empty` 1 element on CPU | 3.00 |
+| `torch.empty` 4 MiB on CPU | 3.23 |
+| metadata read only (`numel()`) | 0.19 |
+| `empty_like` on `flagos` | 3.25 |
+
+Two things follow. **The cost is independent of size**: one element and four MiB differ by
+0.11 us, so the allocator's own work is about a tenth of a microsecond and the rest is fixed
+overhead - the Python call, the dispatcher hop, and constructing the tensor. And **the same
+fixed overhead exists without the plugin at all**: allocating a single element on CPU torch
+costs 3.00 us.
+
+So the plugin-specific share of allocation is about **1.0 us** (3.97 against 3.00), not 4.
+The 4 us figure is measuring "call `torch.empty` from Python" and attributing it to the
+allocator, which was wrong, and it inflated the value assigned to the allocation fast path in
+earlier rounds.
+
+This changes what the fast path is worth. From Python there is no way to reach 1.0-1.5 us -
+the floor for the call itself is around 3 us, on CPU torch as much as here. A fast path only
+has meaning inside a native host program, where the allocation would be an `at::empty` or an
+allocator call in C++, and its cost is not known from these measurements.
+
+The honest position is therefore: allocation offers roughly 1 us of plugin-specific headroom,
+not 2, and the case for prioritising it ahead of the launcher work is gone. The launcher
+remains the large, universal win at about 9.4 us, and the allocation question should be
+answered by measuring a C++ allocation rather than by building a fast path on an assumption.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
