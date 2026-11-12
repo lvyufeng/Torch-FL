@@ -114,6 +114,78 @@ Cause 3 is also the reason the design's "capture must submit no real GPU work" r
 needs our own launch interception rather than relying on FlagGems' path: the interception
 point is exactly where FlagGems enters its device context.
 
+## The CPU-torch configuration: how it runs, and what blocks gate 3
+
+Gate 3 requires CPU-torch + PrivateUse1, which the first probe reported as unavailable. It
+exists on this host, but not as a conda environment: it is a prepared venv plus an unpacked
+CPU torch tree, and it only works when three details are right.
+
+| piece | location |
+| --- | --- |
+| CPU torch 2.10.0+cpu | `/public-nvme/lvyufeng/sandbox/pwm/cpu-torch` (unpacked, no interpreter) |
+| interpreter + torch_fl + FlagGems | `/public-nvme/lvyufeng/verify-rc2-cuda/venv` (python 3.12.6, torch_fl 2.10.0rc2+cuda13.3, FlagGems 5.4.0) |
+| container | `lvyufeng-torch-fl`, glibc 2.39 |
+
+Three details decide whether it works:
+
+1. The container is required. The host's glibc is older than 2.38, and Triton's
+   `libtriton.so` needs 2.38, so the venv cannot import FlagGems outside the container.
+2. `LD_LIBRARY_PATH` must point at `cpu-torch/torch/lib` and nothing else. The container
+   ships its own torch under `/usr/local/lib/python3.12/dist-packages/torch/lib` on the
+   default `LD_LIBRARY_PATH`; resolving `libtorch_python.so` from there while the Python
+   files come from the CPU wheel makes `import torch` fail with
+   `AttributeError: module 'torch._C' has no attribute '_dlpack_exchange_api'`. That
+   failure looks like a broken wheel and is only a library-resolution order problem.
+3. `PYTHONPATH` must put `cpu-torch` before the venv's site-packages, which is what
+   overrides the venv's own CUDA torch.
+
+Working invocation:
+
+```bash
+docker exec -e TORCH_DEVICE_BACKEND_AUTOLOAD=0 \
+  -e PYTHONPATH=/public-nvme/lvyufeng/sandbox/pwm/cpu-torch \
+  -e LD_LIBRARY_PATH=/public-nvme/lvyufeng/sandbox/pwm/cpu-torch/torch/lib \
+  lvyufeng-torch-fl bash -c '$VENV/bin/python /path/to/probe.py'
+```
+
+### What it establishes
+
+| check | result |
+| --- | --- |
+| `torch.__version__` | `2.10.0+cpu`, `torch.version.cuda` is `None` |
+| `import torch_fl` | ok, `privateuse1` backend name is `flagos` |
+| FlagGems | 5.4.0, `flag_gems.device` is `flagos` |
+| `torch.cuda.is_available()` | **`True`** |
+| `torch_device_fn.device(flagos:0)` | **ok** |
+
+The last two are the important ones. With CPU torch, `torch.cuda.is_available()` still
+reports `True` because torch_fl aliases it, and entering `torch.cuda.device()` with a
+`flagos:0` device does not raise here - unlike the CUDA-torch build, where it raised
+`Expected a cuda device, but got: flagos:0`. So gate 2's blocker 3 is configuration
+dependent, and the configuration gate 3 requires is the one where it does not fire. That
+strengthens the case for making the CPU-torch configuration the primary experiment
+environment rather than a final check.
+
+### What blocks gate 3 today
+
+Allocation on the device fails immediately:
+
+```text
+torch.randn(32, 64, device="flagos:0")
+RuntimeError: Cannot get CUDA generator without ATen_cuda library. ...
+```
+
+The installed wheel is a **boxing build** (`_build_config.py` records
+`KERNELS = ("boxing", "flaggems", "tileops", "vendor")`), so its PrivateUse1 kernels
+re-dispatch to CUDA, and CPU torch has no `ATen_cuda` to re-dispatch to. Nothing about this
+is a FlagGems or capture problem: the operator never starts.
+
+Gate 3 therefore needs a target built with `FLAGOS_BUILD_BOXING=0`, so the device path has
+no CUDA library to want in the first place. That is the same property #820's stream work
+established for the replay (`GetCurrentStreamForDevice` in the plugin's own registry), and
+it is the reason that work matters here: under CPU torch there is no `c10::cuda` stream to
+borrow, so the FlagGems launch path needs a stream from the plugin.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
