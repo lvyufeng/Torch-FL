@@ -1006,6 +1006,39 @@ which implementation the dispatcher holds for `aten::mul.Tensor` in this wheel, 
 counters' storage is shared with the library the Python side is talking to. Both are
 observations, not code changes.
 
+### The caller is entered, so the operator is not what was assumed
+
+The previous section left two possibilities: the counters are not shared, or the generated kernel
+is not what runs. An entry counter placed at the top of `CallPythonOp_Generic` and
+`CallPythonOp_TT` - before any host-program logic - separates them, and it settles one thing:
+
+```text
+entry_before             = 0
+entry_after_eager_mul    = 1
+entry_after_softmax      = 2
+stats (hits, no_plan, not_eligible, launch_failed, last_cuda_error) = [0, 0, 0, 0, 0]
+```
+
+The Python caller in that translation unit is live and is entered by an ordinary `a * b`, so
+the instrumentation is sound and the counter storage is the one the Python side reads. And yet
+the host-program counters in the other translation unit never move.
+
+That is not a placement problem and not a guard problem. The binary was checked: exactly one
+real `TryHostProgram` exists (the other symbol is its `.cold` clone), and disassembly shows it
+called from both `CallPythonOp_Generic` and `CallPythonOp_TT`. `FLAGOS_HAVE_FAST_PLAN=1` is
+applied to the whole library target, so no hook is compiled out.
+
+Which leaves one reading that fits every observation: **the single entry counted is not `mul`.**
+The counter is global, so it records that *some* FlagGems operator went through the caller, not
+which one. An ordinary `a * b` plausibly reaches the caller for an internal allocation while
+`mul` itself travels a different route, and every earlier conclusion that assumed the hook was
+being bypassed was reading that global number as if it named the operator.
+
+The fix is to make the entry counter say which operator it saw - record the `func_name` of the
+last entry, or count per name. That was the intent of the unused `EntryName` in this patch and
+is the one missing observation. Until it is read, "the hook is not called" and "the hook is
+called for a different operator" remain indistinguishable, and the latter is better supported.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
