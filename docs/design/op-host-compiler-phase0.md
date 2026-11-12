@@ -357,6 +357,47 @@ unaffected in kind - they were obtained through the ATen dispatcher on a real `f
 device - but `softmax`'s `empty_like` failure should be re-checked against the boxing-off
 wheel before it is treated as a property of the supported configuration.
 
+## Why a boxing-off build here still needed libtorch_cuda
+
+Building the current tree with `FLAGOS_BUILD_BOXING=0` on this host produced
+`KERNELS = ("flaggems", "tileops", "vendor")` and still linked
+`libtorch_cuda.so` and `libc10_cuda.so` into `libtorch_fl.so`:
+
+```text
+$ ldd torch_fl/lib/libtorch_fl.so | grep -E 'torch_cuda|c10_cuda'
+    libtorch_cuda.so => .../torch_fl/lib/libtorch_cuda.so
+    libc10_cuda.so   => .../torch_fl/lib/libc10_cuda.so
+```
+
+The cause is not the kernel set but which torch the build used. `csrc/CMakeLists.txt`
+probes the torch it was configured against rather than assuming:
+
+```cmake
+set(FLAGOS_TORCH_LINKS_LIBTORCH_CUDA OFF)
+get_target_property(_flagos_torch_cpu_location torch_cpu_library IMPORTED_LOCATION)
+...
+      set(FLAGOS_TORCH_LINKS_LIBTORCH_CUDA ON)
+```
+
+That build ran under the CUDA-torch conda environment (`cosmos-torchfl-h100`), whose
+`torch_cpu_library` links CUDA, so the probe turned the dependency on even with boxing off.
+CI's vendor lane builds with CPU torch as the interpreter, which is what turns it off - and
+that is the whole point of that lane, since its wheel "carries no libtorch_cuda.so to
+preload".
+
+So the supported build is reproducible on this host, and the missing ingredient was the build
+interpreter, not a flag:
+
+```bash
+PYTHONPATH=/public-nvme/lvyufeng/sandbox/pwm/cpu-torch \
+LD_LIBRARY_PATH=/public-nvme/lvyufeng/sandbox/pwm/cpu-torch/torch/lib \
+  <cpu-torch-venv>/bin/python setup.py bdist_wheel    # FLAGOS_BUILD_BOXING unset (off)
+```
+
+This also explains the wheels already on disk: the two boxing-off wheels that failed to
+import are builds whose torch was a CUDA torch, so they carry the dependency this lane is
+supposed to avoid.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
