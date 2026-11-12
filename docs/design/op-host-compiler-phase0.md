@@ -736,6 +736,34 @@ not 2, and the case for prioritising it ahead of the launcher work is gone. The 
 remains the large, universal win at about 9.4 us, and the allocation question should be
 answered by measuring a C++ allocation rather than by building a fast path on an assumption.
 
+### The C++ closed loop does not belong in a standalone extension
+
+The next step was a minimal native closed loop: allocate with `at::empty` and submit with
+`cuLaunchKernel`, both in C++, so the loop could be measured without Python or ctypes in the
+path. Written three ways with `torch.utils.cpp_extension.load_inline` and it segfaults every
+time - first at the first launch, later at module load, which is the informative part.
+
+A `load_inline` extension is a second shared object in the process that links torch's C++
+symbols again. This process already carries the plugin's own `libtorch_fl.so`
+and `libflagos.so`, and the environment has already produced two failures of exactly this
+family on this host: the `Duplicated key 'graph_capture_record_stream_reuse'` abort when a
+second `libc10_cuda.so` registered the allocator hook, and the
+`_dlpack_exchange_api` attribute error when `libtorch_python.so` resolved from the wrong
+tree. A second torch in the process is not a safe place to prototype from.
+
+So the closed loop has to be built inside the plugin's own CMake target, where one set of
+torch symbols is already established: a function in `csrc/` that takes the `CUfunction`, the
+parameter mapping and the launch geometry, allocates with `at::empty`, submits through the
+driver API exactly as #820's replay does, and returns the tensor. That also puts it where it
+would actually ship, and it reuses the driver-API plumbing #820 already merged instead of
+re-deriving it.
+
+Two things are therefore still unmeasured, and the distinction matters: the cost of a C++
+allocation on this device, and the cost of a C++ submission. The 6.0 us submission figure
+stands as measured, but it is a Python-and-ctypes figure and the C++ number should be lower;
+the allocation figure has no C++ measurement at all, only the inherited overhead decomposition
+in the previous section.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
