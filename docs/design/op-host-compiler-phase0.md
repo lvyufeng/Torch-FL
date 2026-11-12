@@ -764,6 +764,53 @@ stands as measured, but it is a Python-and-ctypes figure and the C++ number shou
 the allocation figure has no C++ measurement at all, only the inherited overhead decomposition
 in the previous section.
 
+## The native closed loop, in the plugin, measured
+
+Three probe entry points were added to `fast_plan.cc` - the file that already carries #820's
+driver-API plumbing and the plugin's stream lookup - and registered on the existing
+`flagos_fast_plan` custom-operator namespace. They exist only to measure the pieces of a host
+program and are marked for removal once there is a real entry point:
+
+- `host_probe_alloc(sizes, device)` - a C++ `at::empty` on the private-use-1 device;
+- `host_probe_launch(out, in, fn, rows, ncols, block, shared, stream)` - a C++
+  `cuLaunchKernel`;
+- `host_probe_op(in, ...)` - allocate, then submit.
+
+Getting them to run took four corrections, all recorded by the failures rather than guessed:
+the schema rejected `in` as a parameter name because it is reserved; the launch first failed
+with `cuLaunchKernel failed with 1` because `c10::cuda`'s current stream is not in the context
+the `CUfunction` belongs to, so the stream has to be passed in; the schema then mismatched
+because a rewrite had duplicated `int stream`; and all three attempts had to be built inside
+the plugin, not as a `load_inline` extension, for the reason recorded above.
+
+Measured on `softmax` `(2,128,4096)` float32, medians, correctness checked on both the launch
+and the whole operation:
+
+| arm | CPU submission (us) | correct |
+| --- | ---: | --- |
+| Python wrapper | 24.64 | yes |
+| Python `torch.empty` | 4.05 | - |
+| C++ `at::empty` through the custom op | 4.65 | - |
+| C++ `cuLaunchKernel` through the custom op | 7.32 | yes |
+| **C++ allocate + submit through the custom op** | **10.35** | yes |
+| vendor `torch.softmax` on `cuda:0` | 8.95 | yes |
+
+**The closed loop works and is 14.3 us faster than the Python wrapper**, landing at 10.35 us
+against the vendor's 8.95 - and every number in that table carries the cost of a
+`torch.ops` dispatch, because the probes are invoked from Python that way. A real host program
+is reached from `CallPythonOp_Generic` before Python is involved at all, so its true cost is
+this minus the operator dispatch on each row; the C++ launch, for instance, is expected to be
+near the 6.0 us the ctypes prototype measured without a dispatcher in the path.
+
+Two conclusions worth carrying forward, both of which correct earlier assumptions:
+
+1. **The C++ allocation did not beat the Python one** (4.65 against 4.05), which supports the
+   previous section's finding that allocation is mostly fixed overhead and offers no 4 us to
+   recover. Moving allocation into C++ is not where the win is.
+2. **The win is where the decomposition said it was** - submission. Replacing the Triton
+   Python launcher with a direct launch is what took the operation from 24.64 to 10.35, and
+   it is the same work for every operator and every shape.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
