@@ -148,6 +148,22 @@ docker exec -e TORCH_DEVICE_BACKEND_AUTOLOAD=0 \
   lvyufeng-torch-fl bash -c '$VENV/bin/python /path/to/probe.py'
 ```
 
+The host already carries environment scripts for the CUDA configurations, and they encode
+the same two lessons: `/public-nvme/lvyufeng/env.sh` is the workspace entry point, and
+`work/env-torch-fl.sh` strips the container's own torch out of `LD_LIBRARY_PATH` with a
+comment that names the `_dlpack_exchange_api` failure and its cause. `work/with-flagos.sh`
+is a one-line wrapper around it, so a CUDA run needs no hand-assembled environment:
+
+```bash
+docker exec -e TORCH_FL_ENV=cosmos-torchfl-h100 lvyufeng-torch-fl \
+  /public-nvme/lvyufeng/work/with-flagos.sh python your_script.py
+```
+
+Two gaps remain there rather than in this document: `env-torch-fl.sh` defaults to
+`TORCH_FL_ENV=torch-fl-210`, a conda environment that no longer exists, so `with-flagos.sh`
+needs the variable overridden; and there is no equivalent script for the CPU-torch
+configuration above, which is the one the gates need.
+
 ### What it establishes
 
 | check | result |
