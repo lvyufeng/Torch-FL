@@ -181,10 +181,69 @@ re-dispatch to CUDA, and CPU torch has no `ATen_cuda` to re-dispatch to. Nothing
 is a FlagGems or capture problem: the operator never starts.
 
 Gate 3 therefore needs a target built with `FLAGOS_BUILD_BOXING=0`, so the device path has
-no CUDA library to want in the first place. That is the same property #820's stream work
+no CUDA library to want in the first place. The next section narrows this: the operator path
+itself already works, and only the RNG and `empty_like` paths need that build. That is the same property #820's stream work
 established for the replay (`GetCurrentStreamForDevice` in the plugin's own registry), and
 it is the reason that work matters here: under CPU torch there is no `c10::cuda` stream to
 borrow, so the FlagGems launch path needs a stream from the plugin.
+
+## Gate 3 precondition met: an operator runs end to end under CPU torch
+
+The previous section recorded that allocation on the device fails under CPU torch with
+`Cannot get CUDA generator without ATen_cuda library` and concluded that gate 3 needed a
+`FLAGOS_BUILD_BOXING=0` wheel. That conclusion was too broad: the failure is specific to
+paths that ask CUDA for something, not to the device itself. Separating those paths:
+
+| operation | result under `torch 2.10.0+cpu` |
+| --- | --- |
+| `torch.empty(32, 64, device="flagos:0")` | ok |
+| `torch.zeros(...)` | ok |
+| `torch.ones(...)` | ok |
+| CPU tensor `.to("flagos:0")` | ok, and `.cpu()` round-trips equal |
+| `torch.empty_like(x)` | `Cannot initialize CUDA without ATen_cuda library` |
+| `torch.randn(..., device="flagos:0")` | `Cannot get CUDA generator without ATen_cuda library` |
+
+So the device allocates, accepts copies and returns correct data with no CUDA torch at all;
+`randn` needs a CUDA generator and `empty_like` takes a CUDA-initialising path, and both are
+narrow. With tensors built by copy instead of by `randn`:
+
+| call | result |
+| --- | --- |
+| `flag_gems.mul(a, b)` on `flagos:0` | ok, equals the CPU reference |
+| `a * b` through the ATen dispatcher | ok, equals the CPU reference |
+
+**This satisfies gate 3's core requirement** - at least one operator runs end to end under
+CPU-torch + PrivateUse1 - and it does so with the installed wheel, because
+`backends_cuda.conf` routes `mul.Tensor` to `flaggems` rather than to boxing, so nothing in
+that call wants `ATen_cuda`. The earlier `Cannot get CUDA generator` result was the RNG
+path, not the operator path. A boxing-disabled wheel is still wanted for the RNG and
+`empty_like` paths and for a clean contract, but it is no longer what stands between this
+project and gate 3.
+
+The one thing to keep in mind is that these tensors were produced by copy, so the measurement
+is of an operator that reads device memory, not of one that also generates its own inputs.
+
+## Gate 2 under CPU torch: the blocker changes shape
+
+Re-running the capture probe in this configuration gives a different and more useful
+failure, because the same device-context call behaves differently depending on whether
+Dynamo is tracing:
+
+| context | `torch_device_fn.device(flagos:0)` |
+| --- | --- |
+| eager | ok |
+| inside a Dynamo-traced call | `ValueError: Expected a cuda device, but got: flagos:0` |
+
+`mul` therefore still fails to capture, at the same place in FlagGems' launch path, but now
+the difference is caused by tracing rather than by the build. `softmax` fails slightly
+earlier and differently, with `Cannot initialize CUDA without ATen_cuda library`, because
+tracing its dtype/branch logic asks CUDA for something the eager path does not.
+
+That distinction matters for the shim: it is not enough to make the device context work
+under eager execution, which this build already does. The shim has to hold while tracing,
+and `softmax` shows that a second, unrelated CUDA-initialising call also has to be
+intercepted. Both are still adapter work, but there are now two call sites to intercept
+rather than one, and the capture-time behaviour is the one that has to be proven.
 
 ## Support table so far
 
