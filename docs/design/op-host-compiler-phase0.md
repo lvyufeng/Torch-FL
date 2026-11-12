@@ -854,6 +854,44 @@ step is to find out why that overload is not routed to `flaggems` here - check t
 registration for `softmax.int` in this build and the conf's resolution for it - rather than to
 touch the host-program code, which has nothing left to prove until a call reaches it.
 
+### Why the eager call never reaches the hook
+
+Traced through the build, and the answer is a routing fact rather than anything in the host
+program.
+
+The generated FlagGems kernel exists and is what the host program was registered for:
+
+```text
+at::Tensor PrivSoftmaxKernelPython(const at::Tensor & self, int64_t dim, bool half_to_float) {
+  auto result = CallPythonOp_Generic("flag_gems.softmax", {self, dim, half_to_float});
+```
+
+so the name registered - `flag_gems.softmax` - is exactly the name that would be passed. But
+that kernel is wired to the plugin's own `priv_softmax` dispatcher, not to `aten::softmax.int`:
+
+```text
+REGISTER_IMPL_TO_DISPATCHER(PrivSoftmaxFn, priv_softmax_dispatcher, Backend::kFlagGems,
+                            PrivSoftmaxKernelPython)
+```
+
+and `ops.cc` contains no `ADD_IMPL_TO_DISPATCHER` for `"softmax.int"` at all. The conf
+correspondingly has `_softmax = flaggems` and `softmax.int_out = nvidia`, but no `softmax.int`
+entry. So in this build `torch.softmax(x, dim=-1)` runs torch's own decomposition - the
+`register.cc` comment about the "decomposition path (`_safe_softmax` etc.), which is slower"
+is describing exactly what happens - and never enters the plugin's FlagGems kernel.
+
+Three override spellings were tried and none produced a hit: `FLAGOS_OP_softmax=flaggems`,
+`FLAGOS_OP_softmax__int=flaggems`, `FLAGOS_OP_priv_softmax=flaggems`. The eager timing stayed
+between 28.6 and 31.2 us across all of them, consistently above the wrapper's ~24.5, which is
+itself the signal that the FlagGems kernel was never the one running.
+
+So the hook has nothing left to prove until a call reaches it, and driving `aten::softmax.int`
+there is a routing change in this configuration. The cheaper way to finish the validation is
+therefore not to fight that route but to exercise the hook through an operator this build
+already routes to FlagGems - `mul.Tensor` is `flaggems` in this conf - which tests the same
+mechanism (registry lookup, guard, metadata-derived geometry, native allocate and submit)
+without depending on how `softmax.int` is wired.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
