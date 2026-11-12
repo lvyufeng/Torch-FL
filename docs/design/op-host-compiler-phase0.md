@@ -811,6 +811,49 @@ Two conclusions worth carrying forward, both of which correct earlier assumption
    Python launcher with a direct launch is what took the operation from 24.64 to 10.35, and
    it is the same work for every operator and every shape.
 
+## The parameterised host program and the caller hook
+
+Both of the remaining pieces were implemented in the sandbox build tree and built cleanly.
+
+**Parameterisation.** A registered host program holds only the kernel and the geometry a
+compiled artifact would own - `CUfunction`, warps, shared bytes, and the reduction dim. The
+row count, column count and grid are computed from the input tensor's metadata on every call,
+so a first call's sizes are never baked in. The guard is narrow and explicit: one input
+tensor, float32, contiguous, and a normalised reduction dim equal to the last axis; anything
+else returns an undefined tensor and the existing route runs untouched.
+
+**The hook.** `CallPythonOp_Generic` consults the host-program registry immediately after the
+replay hook, and returns the native result when the registry answers. That is the position
+#820 established, before the GIL is taken and before Python arguments are built.
+
+The custom-operator path measures and is correct (from the previous section: allocate plus
+submit 10.35 us, wrapper 24.64, vendor 8.95). What does not yet happen is the hook firing from
+an ordinary eager call:
+
+```text
+registered: true
+eager_softmax_us: 28.6 - 30.5
+hits_delta: 0
+```
+
+`torch.softmax(x, dim=-1)` does not reach the registered program, and the timing says why it
+is not a registration mistake: it is *slower* than calling the FlagGems wrapper directly
+(24.4), so that call is not running the FlagGems kernel at all. The generated kernel does pass
+`"flag_gems.softmax"` to `CallPythonOp_Generic`, which is exactly the name registered, so the
+name is not the problem either.
+
+Forcing the route was tried both ways it can be spelled - `FLAGOS_OP_softmax=flaggems` and
+`FLAGOS_OP_softmax__int=flaggems`, the latter following the `FLAGOS_OP_mm__out` convention
+where `__` stands for the dot - and neither changed the outcome. So in this build
+`aten::softmax.int` never selects the FlagGems kernel, which is a routing question about this
+configuration, not a host-program question.
+
+That is where this stands: the native entry, parameterisation and hook all exist and build,
+and the one thing left to show is an ordinary `torch.softmax` call entering them. The next
+step is to find out why that overload is not routed to `flaggems` here - check the generated
+registration for `softmax.int` in this build and the conf's resolution for it - rather than to
+touch the host-program code, which has nothing left to prove until a call reaches it.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
