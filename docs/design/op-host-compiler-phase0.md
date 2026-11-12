@@ -454,6 +454,36 @@ reached, which is why one lands inside the graph and the other does not - `softm
 through the Triton wrapper that Dynamo can take into the graph, while `mul`'s
 `pointwise_dynamic` callee launches in a way Dynamo leaves as a call.
 
+## First performance numbers, and one path ruled out
+
+Measured in the configured environment (`torch-fl-h100-py312`, `FLAGOS_DISABLE_CUDA_ASSETS=1`),
+`softmax` on `(2, 128, 4096)` float32, median of 200 calls with the CPU clock around the
+call and synchronisation outside the timed region, plus 20 synchronised round trips. Vendor
+is `torch.softmax` on `cuda:0` in the same process, same shape.
+
+| arm | CPU submission (us) | synchronised end to end (us) |
+| --- | ---: | ---: |
+| FlagGems Python wrapper on `flagos` | 26.12 | 32.43 |
+| captured graph executed through Dynamo | **119.15** | **124.05** |
+| vendor `torch.softmax` on `cuda:0` | 8.95 | 16.71 |
+| `torch.empty` on `flagos` | 4.41 | 7.13 |
+
+Two things follow, and the first one changes the design.
+
+**Executing the captured graph through `torch.compile` is not a viable host path.** It is
+4.5x slower than the Python wrapper it was supposed to replace. Every call re-enters
+Dynamo's guard machinery, and the `triton_kernel_wrapper_mutation` higher-order operator
+carries its own dispatch. So a captured FX graph is a good *description* of the host work and
+a bad *execution mechanism*; the host program has to be a native artifact, which is what the
+design already said, now with a number behind it.
+
+**The budget in this environment.** The wrapper is 26.12 us against the vendor's 8.95, so the
+host work to remove is about 17 us, of which allocation is 4.41 us. Those two together
+account for almost all of the gap, which is consistent with the earlier decomposition and
+keeps the arithmetic from the design intact: removing the Python wrapper and keeping a
+4.4 us allocation lands near 9-10 us, and bringing the allocation down is what moves it
+toward the vendor's 8.95.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
