@@ -1086,6 +1086,57 @@ first time the whole chain has been exercised - and the pointwise launch is the 
 does not work yet. The softmax path through the same registry machinery measured 10.35 us with
 correct results via its probe operator.
 
+## An ordinary eager call now runs a native host program
+
+The pointwise launch failed for a reason that had nothing to do with the host program: the
+compiled entry takes **six** parameters, not the four its source signature implies. Triton
+appends a global-scratch pointer and a profile-scratch pointer after the user arguments, and
+the host program had been passing four - so the kernel read two garbage pointers and
+dereferenced them. The signature came out of the compiled artifact rather than from inference:
+
+```text
+define ptx_kernel void @mul_kernel(ptr addrspace(1) %0, ptr addrspace(1) %1,
+                                   ptr addrspace(1) %2, i32 %3,
+                                   ptr addrspace(1) readnone captures(none) %4,
+                                   ptr addrspace(1) readnone captures(none) %5)
+```
+
+with `global_scratch_size` and `profile_scratch_size` both zero in the metadata, so null is the
+correct value for both. With six parameters the launch succeeds from the probe operator and from
+the hook, and the result matches the reference.
+
+### The measurement
+
+With a plan registered for `flag_gems.mul`, an ordinary eager `a * b` on 4096x4096 float32:
+
+| arm | CPU submission (us) |
+| --- | ---: |
+| eager `torch.mul`, native host program | **8.24** |
+| eager `torch.mul`, Python route | 56.19 |
+| direct `flag_gems.mul` call | 51.32 |
+
+**6.8x**, and the 8.24 includes the whole chain an eager call pays: ATen dispatch, the plugin's
+own dispatcher, the host-program lookup, a C++ `at::empty_like`, and the driver submission. All
+230 benchmark calls took the host program and every result matched.
+
+This is also the number the design was aiming for. The vendor operator measured on this machine
+was `torch.softmax` at 8.95 us, and `mul` is the heavier of the two - so a parameterised host
+program reached from an ordinary eager call is now at vendor-kernel parity, which is the claim
+the whole line of work exists to support.
+
+### The defect that cost the most
+
+Worth recording because it was avoidable. The launch had four parameters when the compiled entry
+wanted six, and that is not visible from the source signature, the `arg_names` list, the
+`signature` string, or the metadata - all four were read and all four said the launch was right.
+The compiled artifact's own parameter list was the only authority, and reading it was the last
+thing tried. **When reproducing a compiled entry's ABI, read the entry's parameter list first,
+not the source-level signature.**
+
+Equally worth recording: several crashes were investigated with results printed once at the end,
+so each one reported nothing. The runs that made progress flushed after every step and varied
+one thing per process. That turned "it segfaults" into a line number and then into a signature.
+
 ## Support table so far
 
 Gate 5 asks for a support table with each failure attributed to expressions, control flow,
