@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-17",
+  "timezone": "Asia/Shanghai",
+  "source": {
+    "base_revision": "eba6b82e95b4ae3cc7f1784c54fd8724596f3845",
+    "candidate": "Uncommitted working-tree implementation built in an isolated remote source directory.",
+    "source_sha256_verified_against_remote_build": {
+      "torch_fl/native_host/backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+      "torch_fl/native_host/backends/enflame.py": "455981d040cd98e89dd2486c5bf1993fec08adbf526c460013728fcb82268acd",
+      "torch_fl/native_host/csrc/backends/enflame.cc": "58644e15129c4f80feec665c096adb2c8d5126129d94f50f32457e80d11c2908",
+      "torch_fl/native_host/build.py": "2c8a817a193f9b744afc307f28b8d534034b9603aeb8dab78d7a246754958840",
+      "torch_fl/native_host/compiler/frontend.py": "b6934ef6667fde4a1c8eab76aa373c125215660920457ea6d758bc1325e181e9",
+      "torch_fl/native_host/load.py": "9eaa1f5c8ac5419f2465ab7fd02848f62b10c4d935e0754a26ca705f41b567ab",
+      "torch_fl/native_host/runtime.py": "072c771ea28607d2abdacd154541ee5d4c0ef5889e6042c1e261aa4c8b196d60",
+      "benchmarks/host_compiler/qwen_eager.py": "b7a7332f0b992cf6841f5b258eb38c965f74421d879301e3f7d895a46bfb3bce",
+      "benchmarks/host_compiler/qwen_strict_eager.py": "2ad984ee31db2fc07ce024ffdff8d4dea92803764b26b52d3ee7bd41f50028e2"
+    },
+    "hardware_test_sha256_verified_against_remote_runtime_tests": {
+      "tests/integration/ops/test_enflame_native_hosts.py": "abefbaafcaeef23d792011208d6a9ae5282fede191b60b4d396474fb7343fe30"
+    }
+  },
+  "acceptance": {
+    "adapter_build": "passed",
+    "wheel_preflight": "passed",
+    "hardware_conformance": "34 passed, no skips",
+    "full_model_completed": true,
+    "vendor_exit_code": 0,
+    "native_exit_code": 1,
+    "native_exit_reason": "Vendor logit acceptance failed after all timing repetitions and reports completed.",
+    "performance_80_percent_passed": false,
+    "vendor_logits_passed": false,
+    "accepted": false
+  },
+  "performance": {
+    "prefill": {
+      "vendor_complete_ms": 51.157157868146896,
+      "native_complete_ms": 149.92457628250122,
+      "relative_performance": 0.3412192926378663,
+      "latency_ratio": 2.930666646276924,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 63.94644733518362,
+      "passed": false,
+      "measured_observations": 7
+    },
+    "decode": {
+      "vendor_complete_ms": 44.66981906443834,
+      "native_complete_ms": 139.86861519515514,
+      "relative_performance": 0.319369852930278,
+      "latency_ratio": 3.1311659219704473,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 55.83727383054793,
+      "passed": false,
+      "measured_observations": 56
+    }
+  },
+  "accuracy": {
+    "scope": {
+      "prefill": "all_positions",
+      "decode": "every_requested_step"
+    },
+    "validation": {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "comparisons": 9,
+      "passed_comparisons": 0,
+      "failed_steps": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8
+      ],
+      "violations": 4150755,
+      "passed": false
+    },
+    "full_prefill_max_abs": 0.953125,
+    "last_token_max_abs": 0.625,
+    "teacher_forced_top1_mismatch_indices": [
+      2
+    ],
+    "vendor_generated_tokens": [
+      785,
+      12884,
+      7952,
+      6303,
+      1576,
+      315,
+      279,
+      1616
+    ],
+    "native_generated_tokens": [
+      785,
+      12884,
+      374,
+      6303,
+      1576,
+      432,
+      5610,
+      264
+    ],
+    "vendor_generated_text": "The sky appears blue because of the way",
+    "native_generated_text": "The sky is blue because it contains a"
+  },
+  "original_host_control": {
+    "method": "Same installed wheel, routes and inputs; existing private builder marker _TORCH_FL_BUILDING_NATIVE_HOST=1 bypasses native-host bootstrap. Original FlagGems Python hosts and launcher execute.",
+    "reference": "native-final.pt, not a vendor reference",
+    "rounds": 0,
+    "native_audit_absent": true,
+    "typed_entry_stats_absent": true,
+    "validation_against_native": {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "comparisons": 9,
+      "passed_comparisons": 9,
+      "failed_steps": [],
+      "violations": 0,
+      "passed": true
+    },
+    "last_token_arrays_bitwise_equal": true,
+    "full_prefill_bitwise_equal": true,
+    "full_prefill_max_abs": 0.0,
+    "bitwise_verification": "Independent CPU torch.load comparison of original-host-control.pt and native-final.pt; contiguous uint8 views match for full prefill and all nine last-token arrays.",
+    "matched_prompt_ids_and_decode_inputs": "Independent tensor comparison confirms all three providers use identical prompt ids and eight decode inputs.",
+    "interpretation": "No numerical difference introduced by the adapter on this traversal. The provider discrepancy against vendor PyTorch remains unresolved."
+  },
+  "workload": {
+    "model": "Qwen3-0.6B",
+    "layers": 28,
+    "parameters": 596049920,
+    "prompt": "Explain in one sentence why the sky is blue.",
+    "prompt_tokens": 23,
+    "decode_steps": 8,
+    "rounds": 7,
+    "unmeasured_timing_repetitions": 1,
+    "dtype": "bfloat16",
+    "contract": {
+      "version": 1,
+      "checkpoint_sha256": {
+        "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+      },
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "dtype": "bfloat16",
+      "attention": "eager",
+      "math_settings": {
+        "float32_matmul_precision": "highest",
+        "allow_tf32": false,
+        "allow_bf16_reduced_precision_reduction": true,
+        "allow_fp16_reduced_precision_reduction": true,
+        "environment": {
+          "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+          "NVIDIA_TF32_OVERRIDE": null,
+          "CUBLAS_WORKSPACE_CONFIG": null
+        }
+      }
+    },
+    "cpu_affinity": [
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71
+    ],
+    "torch_threads": 1,
+    "token_selection_device": "cpu",
+    "timed_scope": "Synchronized model forwards; CPU token selection and transfers are outside timed forwards.",
+    "inputs": "Vendor teacher-forced traversal reused by native and original-host control.",
+    "capture_calls": {
+      "vendor": 0,
+      "native": 0,
+      "original_control": 0
+    },
+    "native_host_program_stats": [
+      0,
+      0,
+      0
+    ]
+  },
+  "hardware": {
+    "asset_label": "S60",
+    "reported_device_name": "ZIXIAOC200",
+    "physical_device": 0,
+    "driver_version": "1.10.6",
+    "visibility": {
+      "TOPS_VISIBLE_DEVICES": "0"
+    },
+    "memory_mib_before_each_timed_process_and_after_control": {
+      "total": 42976,
+      "reserved": 1129.94921875,
+      "used": 0,
+      "free": 41846.05078125
+    },
+    "pmon_before_and_after": "no process running",
+    "execution": "Sequential provider processes; compilation completed before timed runs. Occupancy is a snapshot, not a reservation.",
+    "os": "Ubuntu 22.04.5 LTS",
+    "container": "lvyufeng-torch-fl",
+    "container_image": "registry-egc.enflame-tech.com/artifacts/torch_gcu:v2.10.0-TR3.7.107-ubuntu2204",
+    "container_image_id": "sha256:52aac4da7de1a60a28d856e9ff513a0c186777c4539ad063f8fb86e7ac42a066",
+    "sdk_packages": {
+      "topsruntime": "1.7.2.2402",
+      "topscc": "1.7.2.2402",
+      "topsaten": "3.6.20260403"
+    },
+    "tops_runtime_library": "/opt/tops/lib/libtopsrt.so.1.7",
+    "scope": "Existing container; not the pinned current CI image. Hardware conformance covers GCU300, not all source-supported launch architectures."
+  },
+  "environment": {
+    "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+    "torch": "2.10.0+cpu",
+    "torch_cuda": null,
+    "torch_cxx11_abi": true,
+    "transformers": "5.19.0",
+    "flag_gems": "5.4.0",
+    "flagtree": "0.7.0+enflame3.6",
+    "triton": "3.6.0",
+    "flagcx": "0.14.0+tops1.9.10",
+    "cython_build_only": "3.2.4",
+    "vendor_torch_gcu": "2.10.0+3.7.20260408",
+    "dependencies": "Published wheels; no FlagGems/FlagTree/FlagCX source builds. Both provider environments share CPU-Torch and Hugging Face dependencies. Vendor process imports neither torch_fl nor flag_gems.",
+    "runtime_environment": {
+      "TORCH_DEVICE_BACKEND_AUTOLOAD": "0",
+      "PYTHONNOUSERSITE": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1"
+    }
+  },
+  "artifact": {
+    "wheel": "torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl",
+    "wheel_sha256": "e44d136243d838cfb522053b6020b597d4e51e803135aa5cef10c5f51b8165aa",
+    "verified_manifest_sdk_version": "1.7.2.2402",
+    "filename_sdk_note": "The existing table emits the tops1.9.10 variant; actual build SDK is recorded in the generated compatibility manifest. This wheel is not published.",
+    "kernels": [
+      "flaggems",
+      "vendor"
+    ],
+    "backend": {
+      "schema_version": 1,
+      "abi_version": 1,
+      "vendor": "enflame",
+      "compiler_backend": "gcu",
+      "capabilities": 177,
+      "scratch_alignment": 256,
+      "slot_bytes": 128,
+      "slot_alignment": 128,
+      "native_source_sha256": "704c91d3ab41323f2c4de2d826ae16bae2519f7a4c14e221c1eec4c7b42aa34d",
+      "compiler_distribution": {
+        "name": "flagtree",
+        "version": "0.7.0+enflame3.6"
+      },
+      "utility_modules": [
+        "gcu_utils"
+      ],
+      "driver_sources": {
+        "backends/enflame/backend.py": "f3fb7ba077c9070598cc5da565741c7e8d6cac66f4ecac4f12f28fbdb93151b4",
+        "backends/enflame/driver.py": "023f2668b139e0d4ed71855c6a69a9b2c520129f2c8a052cb92b8c0290b2fdb0",
+        "backends/enflame/utils/gcu.cpp": "1449b98b34f2f0d40891bb69c33c9e956427664730dc9a9cf60aa3c07ab60e82",
+        "backends/enflame/compiler.py": "d295cd88485a1291922b234abd996ba065f732c527c89bcd9dfd1c887f11ab3c",
+        "backends/enflame/VERSION": "7489df2e853756006b398564f8ad88c2726de658dad26d64883ed2f03a3be642"
+      },
+      "adapter_sources": {
+        "backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+        "backends/enflame.py": "455981d040cd98e89dd2486c5bf1993fec08adbf526c460013728fcb82268acd"
+      },
+      "native_sources": {
+        "csrc/launcher.cc": "357b1d3b7706f35b40230a89363e7c2e4913ab49bc035fcdbb3c3d00154b92c8",
+        "csrc/backend_api.h": "718684df8768c47b192e2d516c9679f26f30b6fd55abeb4a65ee1e89c7e501c3",
+        "csrc/host_abi.h": "ce8daf1c3b9e683b3d28b0536d2671cc42207bc1e111e6229b4ab3e837ea391a",
+        "csrc/backends/enflame.cc": "58644e15129c4f80feec665c096adb2c8d5126129d94f50f32457e80d11c2908"
+      }
+    },
+    "host_artifacts": 797,
+    "typed_variants": 684,
+    "typed_fallbacks": 990,
+    "registered_typed_slots": 276,
+    "typed_entry_hits": 59432,
+    "native_source_stats": [
+      395,
+      0
+    ],
+    "allowed_device_compiler_subprocesses": 35,
+    "warm_python_calls": {
+      "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/codegen_config_utils.py:get_heuristics_for_num_warps": 56,
+      "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/codegen_config_utils.py:enflame_heuristics_for_num_warps": 56
+    }
+  },
+  "verification": {
+    "ruff_check": {
+      "command": "ruff check",
+      "exit_code": 0,
+      "output": "All checks passed!"
+    },
+    "ruff_format": {
+      "command": "ruff format --check",
+      "exit_code": 0,
+      "output": "626 files already formatted"
+    },
+    "local_units": {
+      "command": "TORCH_DEVICE_BACKEND_AUTOLOAD=0 python -m pytest tests/unit/test_native_host_*.py tests/unit/test_native_scalar_bindings.py tests/unit/test_native_source_bridges.py tests/unit/test_setup_build.py tests/unit/test_wheel_preflight.py tests/unit/test_ops_conftest_platform.py tests/unit/test_logits_validation.py -q -rs --disable-warnings",
+      "output": "302 passed, 4 skipped, 54 warnings in 2.14s",
+      "skip_reasons": [
+        "Three modules require Torch/torchgen absent on the macOS host.",
+        "One MetaX setup case requires GNU ld."
+      ]
+    },
+    "linux_torch_units": {
+      "command": "python -m pytest tests/unit/test_native_host_ir.py tests/unit/test_native_source_bridges.py tests/unit/test_logits_validation.py -q --disable-warnings",
+      "output": "88 passed, 39 warnings in 29.84s"
+    },
+    "hardware": {
+      "command": "python -m pytest tests/integration/ops/test_enflame_native_hosts.py -q --disable-warnings",
+      "output": "34 passed in 5.32s",
+      "scope": "Installed native-host wheel imported outside its source checkout; 12 cases compare launch schedules against the published vendor wrapper."
+    },
+    "preflight": {
+      "command": "python scripts/tools/torch-fl-preflight --wheel dist/torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl --check-build-env --check-native-host-backend --sdk-version 1.7.2.2402",
+      "exit_code": 0,
+      "build": {
+        "distributions": {
+          "flag_gems": "5.4.0",
+          "flagcx": "0.14.0+tops1.9.10",
+          "flagtree": "0.7.0+enflame3.6",
+          "torch": "2.10.0+cpu"
+        },
+        "sdk_version": "1.7.2.2402",
+        "torch_cxx11_abi": true,
+        "kernels": [
+          "flaggems",
+          "vendor"
+        ],
+        "vendor_torch_libraries": false
+      }
+    },
+    "native_and_original_control_cpu_fallback_log_occurrences": 0
+  },
+  "reproduction": {
+    "remote_root": "/public-flash/lvyufeng/codex-enflame-native-20261117",
+    "source_directory": "src",
+    "native_python": "venv/bin/python",
+    "vendor_python": "vendor-matched/bin/python",
+    "vendor_command": "taskset -c 64-71 <root>/vendor-matched/bin/python -u <root>/src/benchmarks/host_compiler/qwen_strict_eager.py --model <root>/model --device gcu:0 --dtype bfloat16 --steps 8 --rounds 7 --progress-every 1 --output <root>/results/vendor-cpu-token.json",
+    "native_command": "taskset -c 64-71 <root>/venv/bin/python -u <root>/src/benchmarks/host_compiler/qwen_strict_eager.py --model <root>/model --device flagos:0 --dtype bfloat16 --steps 8 --rounds 7 --progress-every 1 --reference <root>/results/vendor-cpu-token.pt --check-logits --output <root>/results/native-final.json",
+    "original_host_command": "_TORCH_FL_BUILDING_NATIVE_HOST=1 taskset -c 64-71 <root>/venv/bin/python -u <root>/src/benchmarks/host_compiler/qwen_strict_eager.py --model <root>/model --device flagos:0 --dtype bfloat16 --steps 8 --rounds 0 --skip-sampling --progress-every 1 --reference <root>/results/native-final.pt --output <root>/results/original-host-control.json",
+    "remote_logs": [
+      "build-8.log",
+      "preflight-final.log",
+      "conformance-34-verified.log",
+      "torch-unit.log",
+      "vendor-model-final.log",
+      "native-model-final.log",
+      "original-control.log"
+    ]
+  },
+  "raw_reports": {
+    "vendor": {
+      "file": "qwen3_vendor_enflame.json",
+      "sha256": "4c169644d3fed444279f430f67ba37f1460d0878149f09c3f6fc14309831e37c"
+    },
+    "native": {
+      "file": "qwen3_eager_source_hosts_enflame.json",
+      "sha256": "d5a1a59c6c2189fac72ced7a3aab1565e224bdfe795dfa58f110c1a0d57da6f7"
+    },
+    "original_control": {
+      "file": "qwen3_original_host_control_enflame.json",
+      "sha256": "b159775d5ab4b4197f65e935f28e1aa37215438be59f030ae38c1f03cd7e1732"
+    }
+  },
+  "limitations": [
+    "This Qwen3-0.6B workload fails both vendor accuracy and 80% performance gates. No claim is made for other models, SDKs or architectures.",
+    "Both providers select tokens on CPU outside measured model forwards because device argmax.out lacks a strict route. End-to-end generation throughput is not qualified.",
+    "The vendor pointwise host uses Cython object semantics rather than the shared typed C++ schedule.",
+    "The scoped warm Python profile and absence of CPU fallback log messages are not an exhaustive GPU kernel trace or a decomposition of the latency gap.",
+    "Earlier validation populated caches; first-forward timing is not an empty-cache cold compilation result."
+  ],
+  "historical_status": "Pre-optimization failure; superseded by enflame_native_host_optimized.json. Original measurements are preserved.",
+  "superseded_by": "enflame_native_host_optimized.json"
+}

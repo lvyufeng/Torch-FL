@@ -26,7 +26,12 @@ COMPILED_FIELDS = (
     "slot_alignment",
     "native_source_sha256",
 )
-_ADAPTERS = {"nvidia": "nvidia.py", "metax": "metax.py", "ascend": "ascend.py"}
+_ADAPTERS = {
+    "nvidia": "nvidia.py",
+    "metax": "metax.py",
+    "ascend": "ascend.py",
+    "enflame": "enflame.py",
+}
 _ROOT = Path(__file__).resolve().parent
 
 

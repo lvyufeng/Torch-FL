@@ -1,6 +1,7 @@
 # Copyright 2026 FlagOS Contributors
 # SPDX-License-Identifier: Apache-2.0
 
+import ast
 import importlib.util
 import os
 from pathlib import Path
@@ -205,6 +206,62 @@ def test_identical_source_does_not_touch_build_artifact(tmp_path):
     assert path.stat().st_mtime_ns == before
     build.write_changed(path, "def f(): return 2\n")
     assert path.read_text() == "def f(): return 2\n"
+
+
+def test_shadowed_device_definition_keeps_the_original_jit_alias(source_module):
+    original = source_module("""
+decorations = []
+def device(function):
+    decorations.append(function)
+    return object()
+@device
+def copy_(value):
+    return value
+device_copy = copy_
+def copy_(value):
+    return device_copy
+""")
+    source, _ = build.source_module(original, "fg_aot")
+    assert "@device" not in source
+    assert source.count("def copy_(") == 1
+    generated = {}
+    exec(source, generated)
+    generated["_bind"](lambda value: value)
+    assert generated["copy_"](None) is original.device_copy
+    assert len(original.decorations) == 1
+
+
+def test_vendor_pointwise_cache_accepts_the_published_config_without_balance_grid():
+    from types import SimpleNamespace
+
+    path = SOURCE.with_name("runtime.py")
+    tree = ast.parse(path.read_text())
+    function = next(
+        node
+        for node in tree.body
+        if getattr(node, "name", None) == "pointwise_instantiate"
+    )
+    calls = []
+
+    def adapter(owner, rank, kernel):
+        calls.append((rank, kernel))
+        return object()
+
+    namespace = {
+        "EnflamePointwiseOverload": adapter,
+        "PointwiseOverload": adapter,
+        "_kernel_factory": lambda owner, rank: rank,
+    }
+    exec(compile(ast.Module([function], []), str(path), "exec"), namespace)
+    owner = SimpleNamespace(
+        config=SimpleNamespace(prefer_block_pointer=True),
+        overloads={},
+        _native_pointwise_module="published.vendor.pointwise",
+    )
+    first = namespace["pointwise_instantiate"](owner, 1)
+    assert namespace["pointwise_instantiate"](owner, 1) is first
+    assert namespace["pointwise_instantiate"](owner, 3) is not first
+    assert calls == [(1, 1), (3, 3)]
 
 
 def test_dataclass_constructor_preserves_enum_default_and_factory(source_module):

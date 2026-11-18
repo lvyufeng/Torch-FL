@@ -1,0 +1,316 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "timing_note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+  "device_profile": {
+    "artifact": {
+      "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/results/native-final-pti.trace.json",
+      "sha256": "32fe95764b756c1f55d12873457ec8988bb1a373bc5489094926ebe47b54fe90"
+    },
+    "scopes": {
+      "prefill": {
+        "profiled_wall_ms": 74.558246,
+        "kernel_count": 2519,
+        "kernel_sum_ms": 38.541016000000006,
+        "copy_count": 35,
+        "copy_sum_ms": 0.323454,
+        "device_busy_union_ms": 38.864474609375,
+        "host_or_device_idle_ms": 35.693771390625,
+        "top_kernels": [
+          {
+            "name": "_Z35matmul_kernel_lhs_all_in_l1_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 197,
+            "duration_ms": 6.565587000000002
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3MULEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 369,
+            "duration_ms": 4.976502000000001
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3ADDEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 262,
+            "duration_ms": 3.664351
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi2ELi2EEvPvS0_15BroadcastParams",
+            "calls": 253,
+            "duration_ms": 3.011486999999998
+          },
+          {
+            "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+            "calls": 143,
+            "duration_ms": 2.0561089999999997
+          },
+          {
+            "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+            "calls": 141,
+            "duration_ms": 1.996949
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3POWEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.8579969999999995
+          },
+          {
+            "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.6925800000000004
+          },
+          {
+            "name": "_Z19slice_and_transposeILi3ELi2EEvPvS0_23SliceAndTransposeParams",
+            "calls": 112,
+            "duration_ms": 1.6336819999999996
+          },
+          {
+            "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.527978
+          },
+          {
+            "name": "_Z9transposeILi3ELi2EL16TransposePattern3EEvPvS1_S1_15TransposeParams",
+            "calls": 112,
+            "duration_ms": 1.433426999999999
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi2ELi4EEvPvS0_15BroadcastParams",
+            "calls": 115,
+            "duration_ms": 1.3344829999999996
+          },
+          {
+            "name": "_Z12unary_kernelIN4tops13__ef_bfloat16ES1_N9cc_kernel3NEGEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 56,
+            "duration_ms": 0.7912209999999998
+          },
+          {
+            "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+            "calls": 56,
+            "duration_ms": 0.7166900000000002
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+            "calls": 56,
+            "duration_ms": 0.6855200000000001
+          },
+          {
+            "name": "_Z38softmax_fwd_dim0_batch32_seq128_kernelIffN9cc_kernel7SOFTMAXELi32EEvPT_PT0_iiiijj16SOFTMAX_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.5672460000000001
+          },
+          {
+            "name": "_Z31matmul_kernel_all_in_l1_large_bIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.496301
+          },
+          {
+            "name": "_Z12unary_kernelIN4tops13__ef_bfloat16ES1_N9cc_kernel4SILUEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.4638620000000001
+          },
+          {
+            "name": "_Z31matmul_kernel_all_in_l1_large_bIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb0ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.45737500000000003
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3MULEN4tops13__ef_bfloat16ELb0ELb0ELb1ELb0EEvT_PhS5_PT0_15BINARY_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.44719500000000006
+          }
+        ]
+      },
+      "decode": {
+        "profiled_wall_ms": 68.523455,
+        "kernel_count": 2357,
+        "kernel_sum_ms": 34.302246,
+        "copy_count": 15,
+        "copy_sum_ms": 0.19566,
+        "device_busy_union_ms": 34.49790087890625,
+        "host_or_device_idle_ms": 34.025554121093755,
+        "top_kernels": [
+          {
+            "name": "_Z41matmul_kernel_lhs_all_in_l1_trans_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li1ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 197,
+            "duration_ms": 6.002631000000001
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3MULEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 369,
+            "duration_ms": 4.888614000000001
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3ADDEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 262,
+            "duration_ms": 3.526516
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi2ELi2EEvPvS0_15BroadcastParams",
+            "calls": 196,
+            "duration_ms": 2.157053
+          },
+          {
+            "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+            "calls": 143,
+            "duration_ms": 1.8682640000000006
+          },
+          {
+            "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+            "calls": 141,
+            "duration_ms": 1.8554429999999995
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3POWEhLb0ELb0ELb0ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.688824
+          },
+          {
+            "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+            "calls": 112,
+            "duration_ms": 1.5301730000000004
+          },
+          {
+            "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.5073940000000003
+          },
+          {
+            "name": "_Z12slice_kernelILi2ELi2ELi4EEvPvS0_11SliceParams",
+            "calls": 112,
+            "duration_ms": 1.4126049999999999
+          },
+          {
+            "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.3895970000000004
+          },
+          {
+            "name": "_Z12unary_kernelIN4tops13__ef_bfloat16ES1_N9cc_kernel3NEGEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 56,
+            "duration_ms": 0.7182450000000001
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi1ELi4EEvPvS0_15BroadcastParams",
+            "calls": 64,
+            "duration_ms": 0.6955700000000001
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+            "calls": 56,
+            "duration_ms": 0.6828520000000001
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi2ELi4EEvPvS0_15BroadcastParams",
+            "calls": 56,
+            "duration_ms": 0.599864
+          },
+          {
+            "name": "_Z38softmax_fwd_dim0_batch32_seq128_kernelIffN9cc_kernel7SOFTMAXELi32EEvPT_PT0_iiiijj16SOFTMAX_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.5647179999999999
+          },
+          {
+            "name": "_Z31matmul_kernel_all_in_l1_large_bIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb0ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.452921
+          },
+          {
+            "name": "_Z41matmul_kernel_lhs_all_in_l1_trans_split_bIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li1ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.43825299999999995
+          },
+          {
+            "name": "_Z12unary_kernelIN4tops13__ef_bfloat16ES1_N9cc_kernel4SILUEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.425374
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel3MULEN4tops13__ef_bfloat16ELb0ELb0ELb1ELb0EEvT_PhS5_PT0_15BINARY_OP_PARAS",
+            "calls": 28,
+            "duration_ms": 0.4179709999999999
+          }
+        ]
+      }
+    }
+  },
+  "api_profile": {
+    "artifact": {
+      "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/results/native-final-api.json",
+      "sha256": "c0a955a2bf9ed1aced5ff168bdbefacb11f55702e8c69f8489e0bbecbd8d0f2c"
+    },
+    "api_cpu_times": [
+      {
+        "api": "topsGetDevice",
+        "calls": 72472,
+        "cpu_ms": 19.408926999994076
+      },
+      {
+        "api": "topsLaunchKernel",
+        "calls": 4876,
+        "cpu_ms": 41.54376800000007
+      },
+      {
+        "api": "topsStreamSynchronize",
+        "calls": 22,
+        "cpu_ms": 0.51481
+      },
+      {
+        "api": "topsMemcpy",
+        "calls": 22,
+        "cpu_ms": 1.407176
+      },
+      {
+        "api": "topsSetDevice",
+        "calls": 376,
+        "cpu_ms": 0.1704930000000001
+      },
+      {
+        "api": "topsDeviceSynchronize",
+        "calls": 2,
+        "cpu_ms": 1.304621
+      }
+    ],
+    "transfers": [
+      {
+        "kind": 2,
+        "bytes": 1,
+        "roots": [
+          "at::native::flagos::EmbeddingKernelGcu"
+        ],
+        "calls": 2
+      },
+      {
+        "kind": 3,
+        "bytes": 4,
+        "roots": [
+          "at::native::flagos::gcu::DtypeCast",
+          "at::native::flagos::ArangeKernelGcu"
+        ],
+        "calls": 12
+      },
+      {
+        "kind": 1,
+        "bytes": 2,
+        "roots": [],
+        "calls": 2
+      },
+      {
+        "kind": 2,
+        "bytes": 1,
+        "roots": [
+          "at::native::flagos::gcu::DtypeCast"
+        ],
+        "calls": 2
+      },
+      {
+        "kind": 3,
+        "bytes": 4,
+        "roots": [
+          "at::native::flagos::AddTensorKernelGcu"
+        ],
+        "calls": 4
+      }
+    ],
+    "tensor_readbacks": [],
+    "only_scalar_bool_readbacks": true
+  }
+}

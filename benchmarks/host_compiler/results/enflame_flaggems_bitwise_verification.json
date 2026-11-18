@@ -1,0 +1,31 @@
+{
+  "full_prefill_logits": true,
+  "every_last_token_logits": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "every_decode_input": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+  ],
+  "prompt_ids": true,
+  "contracts_equal": true,
+  "array_lengths_equal": true,
+  "artifact_sha256": {
+    "vendor-final": "8c91f510d79f56d339fde6183800309b1d72ce840c97d210ab96b0e640b5d035",
+    "native-final": "bff8d91f74ebe59c65fa6be047daad3c2a8f0b13bd18006c8832ad67eda127b6"
+  }
+}

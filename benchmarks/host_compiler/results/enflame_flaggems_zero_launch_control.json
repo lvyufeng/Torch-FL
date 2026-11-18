@@ -1,0 +1,267 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "source_profile": "generic",
+  "square_via_mul": true,
+  "unavailable": {
+    "cos": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.cos",
+    "sin": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.sin",
+    "rsqrt": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.rsqrt",
+    "where.self": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.where",
+    "mean.dim": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.mean",
+    "silu": "Generic published module is absent from the prebuilt host closure: flag_gems.ops.silu"
+  },
+  "reference_sha256": "8c91f510d79f56d339fde6183800309b1d72ce840c97d210ab96b0e640b5d035",
+  "baseline_config": {
+    "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/zero-launch-control.baseline.conf",
+    "sha256": "75a5ba78d650a17fe44d1af6ba2fe586ff29491e5ff2e8ba84f6edb2242fac96"
+  },
+  "layers": 28,
+  "parameters": 596049920,
+  "contract": {
+    "version": 1,
+    "checkpoint_sha256": {
+      "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+    },
+    "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+    "dtype": "bfloat16",
+    "attention": "eager",
+    "math_settings": {
+      "float32_matmul_precision": "highest",
+      "allow_tf32": false,
+      "allow_bf16_reduced_precision_reduction": true,
+      "allow_fp16_reduced_precision_reduction": true,
+      "environment": {
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "CUBLAS_WORKSPACE_CONFIG": null
+      }
+    }
+  },
+  "cases": {
+    "baseline": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [],
+      "operator_calls": {},
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.6049694269895554,
+      "enqueued_kernels": {},
+      "flag_gems_executed": false
+    },
+    "pow.Tensor_Scalar": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "pow.Tensor_Scalar"
+      ],
+      "operator_calls": {
+        "pow.Tensor_Scalar": 1017
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.2236657030880451,
+      "enqueued_kernels": {},
+      "flag_gems_executed": false
+    }
+  },
+  "individually_passing": [],
+  "admitted_kernel_sources": {}
+}

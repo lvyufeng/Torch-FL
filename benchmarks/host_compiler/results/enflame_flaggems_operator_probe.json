@@ -1,0 +1,2007 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "reference_sha256": "1b34a5c12ebbd5b933ed6bc36a7fd8bf5b63eb12f301a1d6401decab94f812c1",
+  "layers": 28,
+  "parameters": 596049920,
+  "contract": {
+    "version": 1,
+    "checkpoint_sha256": {
+      "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+    },
+    "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+    "dtype": "bfloat16",
+    "attention": "eager",
+    "math_settings": {
+      "float32_matmul_precision": "highest",
+      "allow_tf32": false,
+      "allow_bf16_reduced_precision_reduction": true,
+      "allow_fp16_reduced_precision_reduction": true,
+      "environment": {
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "CUBLAS_WORKSPACE_CONFIG": null
+      }
+    }
+  },
+  "cases": {
+    "baseline": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [],
+      "operator_calls": {},
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.5484168324619532,
+      "enqueued_kernels": {}
+    },
+    "mul.Tensor": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "mul.Tensor"
+      ],
+      "operator_calls": {
+        "mul.Tensor": 3573
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 4.544362988322973,
+      "enqueued_kernels": {
+        "mul_func_kernel_rank_1": 252,
+        "mul_func_kernel_rank_4_stride_constexpr": 2016,
+        "mul_func_scalar_kernel_rank_1": 270,
+        "mul_func_kernel_rank_3_stride_constexpr": 1035
+      }
+    },
+    "add.Tensor": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "add.Tensor"
+      ],
+      "operator_calls": {
+        "add.Tensor": 2277
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 9.65380184352398,
+      "enqueued_kernels": {
+        "add_func_no_alpha_kernel_rank_4_stride_constexpr": 252,
+        "add_func_no_alpha_kernel_rank_1": 1008,
+        "add_func_tensor_scalar_kernel_rank_1": 1017
+      }
+    },
+    "neg": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "neg"
+      ],
+      "operator_calls": {
+        "neg": 504
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 3.420603957027197,
+      "enqueued_kernels": {
+        "neg_func_kernel_rank_4_stride_constexpr": 448,
+        "neg_func_kernel_rank_4": 56
+      }
+    },
+    "pow.Tensor_Scalar": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 0,
+        "failed_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "violations": 3315234,
+        "passed": false
+      },
+      "selected": [
+        "pow.Tensor_Scalar"
+      ],
+      "operator_calls": {
+        "pow.Tensor_Scalar": 1017
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 3494528,
+          "violations": 2288493,
+          "nonfinite": 0,
+          "max_abs": 0.5,
+          "max_scaled_error": 385.7713078187368
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 140917,
+          "nonfinite": 0,
+          "max_abs": 0.5,
+          "max_scaled_error": 309.1872791519434
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 140910,
+          "nonfinite": 0,
+          "max_abs": 0.5078125,
+          "max_scaled_error": 366.546329723225
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 133195,
+          "nonfinite": 0,
+          "max_abs": 0.5,
+          "max_scaled_error": 380.48343777976726
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 126514,
+          "nonfinite": 0,
+          "max_abs": 0.4296875,
+          "max_scaled_error": 297.70253929866993
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 124087,
+          "nonfinite": 0,
+          "max_abs": 0.4375,
+          "max_scaled_error": 271.505376344086
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 120779,
+          "nonfinite": 0,
+          "max_abs": 0.40625,
+          "max_scaled_error": 266.0550458715596
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 121009,
+          "nonfinite": 0,
+          "max_abs": 0.4375,
+          "max_scaled_error": 242.80999528524282
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 119330,
+          "nonfinite": 0,
+          "max_abs": 0.375,
+          "max_scaled_error": 221.91780821917808
+        }
+      ],
+      "elapsed_seconds": 2.9790719151496887,
+      "enqueued_kernels": {
+        "pow_func_tensor_scalar_kernel_rank_1": 1017
+      }
+    },
+    "cos": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "cos"
+      ],
+      "operator_calls": {
+        "cos": 9
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.876218020915985,
+      "enqueued_kernels": {
+        "cos_func_kernel_rank_1": 9
+      }
+    },
+    "sin": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "sin"
+      ],
+      "operator_calls": {
+        "sin": 9
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.896734107285738,
+      "enqueued_kernels": {
+        "sin_func_kernel_rank_1": 9
+      }
+    },
+    "rsqrt": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 0,
+        "failed_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "violations": 3818323,
+        "passed": false
+      },
+      "selected": [
+        "rsqrt"
+      ],
+      "operator_calls": {
+        "rsqrt": 1017
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 3494528,
+          "violations": 2783579,
+          "nonfinite": 0,
+          "max_abs": 1.0,
+          "max_scaled_error": 790.5759162303665
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 141552,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 315.902948589475
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 130734,
+          "nonfinite": 0,
+          "max_abs": 0.6484375,
+          "max_scaled_error": 393.4387538352608
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 135327,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 343.11926605504584
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 124623,
+          "nonfinite": 0,
+          "max_abs": 0.375,
+          "max_scaled_error": 261.6091954022989
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 128440,
+          "nonfinite": 0,
+          "max_abs": 0.5,
+          "max_scaled_error": 372.0874369445111
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 127993,
+          "nonfinite": 0,
+          "max_abs": 0.625,
+          "max_scaled_error": 331.9502074688796
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 121609,
+          "nonfinite": 0,
+          "max_abs": 0.4375,
+          "max_scaled_error": 297.97191887675507
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 124466,
+          "nonfinite": 0,
+          "max_abs": 0.41796875,
+          "max_scaled_error": 333.1249309031577
+        }
+      ],
+      "elapsed_seconds": 3.375715296715498,
+      "enqueued_kernels": {
+        "rsqrt_func_kernel_rank_1": 1017
+      }
+    },
+    "cat": {
+      "error": "CompilationError: at 34:4:\n    # [pre, dim_size_out*dim_prod_post]. Grid: (blocks_per_row, num_tensors,\n    # grid_z). pid_col/pid_row0/pid_t map directly onto the axes -> NO division\n    # at all; each program loops over the rows assigned to its z-slot.\n    pid_col = tl.program_id(0)\n    pid_t = tl.program_id(1)\n    pid_row0 = tl.program_id(2)\n\n    if pid_t == 0:\n        in_ptr = in_ptr_a\n        dim_size_in = dim_size_in_a\n        dim_offset = dim_offset_a\n    elif pid_t == 1:\n    ^\nAssertionError('Mismatched type for dim_size_in between then block (int32) and else block (int64)')",
+      "selected": [
+        "cat"
+      ],
+      "operator_calls": {
+        "cat": 117
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 3.1345915030688047,
+      "enqueued_kernels": {
+        "cat_copy_row_kernel_4": 60
+      }
+    },
+    "where.self": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "where.self"
+      ],
+      "operator_calls": {
+        "where.self": 9
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 22.066907182335854,
+      "enqueued_kernels": {
+        "where_inner_kernel_rank_4_stride_constexpr": 9
+      }
+    },
+    "mean.dim": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 0,
+        "failed_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "violations": 2800442,
+        "passed": false
+      },
+      "selected": [
+        "mean.dim"
+      ],
+      "operator_calls": {
+        "mean.dim": 1017
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 3494528,
+          "violations": 1803252,
+          "nonfinite": 0,
+          "max_abs": 1.0,
+          "max_scaled_error": 671.8712466970934
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 130671,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 341.25636672325976
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 133131,
+          "nonfinite": 0,
+          "max_abs": 0.40625,
+          "max_scaled_error": 237.4611628939192
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 127547,
+          "nonfinite": 0,
+          "max_abs": 0.46875,
+          "max_scaled_error": 279.6420581655481
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 129134,
+          "nonfinite": 0,
+          "max_abs": 0.375,
+          "max_scaled_error": 226.20755619320897
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 124084,
+          "nonfinite": 0,
+          "max_abs": 0.4375,
+          "max_scaled_error": 274.64465841357173
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 118920,
+          "nonfinite": 0,
+          "max_abs": 0.34375,
+          "max_scaled_error": 232.66272189349115
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 121723,
+          "nonfinite": 0,
+          "max_abs": 0.375,
+          "max_scaled_error": 225.38497433504432
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 111980,
+          "nonfinite": 0,
+          "max_abs": 0.3125,
+          "max_scaled_error": 185.32338308457713
+        }
+      ],
+      "elapsed_seconds": 1.3744061402976513,
+      "enqueued_kernels": {
+        "mean_kernel_dim_low": 1017
+      }
+    },
+    "silu": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "silu"
+      ],
+      "operator_calls": {
+        "silu": 252
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.1101587694138288,
+      "enqueued_kernels": {
+        "silu_forward_kernel_rank_1": 252
+      }
+    },
+    "_softmax": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "_softmax"
+      ],
+      "operator_calls": {
+        "_softmax": 252
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 1.4422706291079521,
+      "enqueued_kernels": {
+        "softmax_kernel_inner": 252
+      }
+    },
+    "bmm": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "bmm"
+      ],
+      "operator_calls": {
+        "bmm": 504
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 78.69413005374372,
+      "enqueued_kernels": {
+        "bmm_kernel": 5715
+      }
+    },
+    "mm": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 0,
+        "failed_steps": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8
+        ],
+        "violations": 4263896,
+        "passed": false
+      },
+      "selected": [
+        "mm"
+      ],
+      "operator_calls": {
+        "mm": 1773
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 3494528,
+          "violations": 3209425,
+          "nonfinite": 0,
+          "max_abs": 0.9375,
+          "max_scaled_error": 822.7251296558227
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 130807,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 378.8214443952149
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 130839,
+          "nonfinite": 0,
+          "max_abs": 0.5,
+          "max_scaled_error": 414.20816615529856
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 136021,
+          "nonfinite": 0,
+          "max_abs": 0.625,
+          "max_scaled_error": 364.1618497109826
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 150043,
+          "nonfinite": 0,
+          "max_abs": 0.6875,
+          "max_scaled_error": 467.4563420167172
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 131336,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 350.48231511254016
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 127569,
+          "nonfinite": 0,
+          "max_abs": 0.5625,
+          "max_scaled_error": 311.4224137931035
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 126370,
+          "nonfinite": 0,
+          "max_abs": 0.4375,
+          "max_scaled_error": 352.69320843091333
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": false,
+          "elements": 151936,
+          "violations": 121486,
+          "nonfinite": 0,
+          "max_abs": 0.40625,
+          "max_scaled_error": 280.5755395683453
+        }
+      ],
+      "elapsed_seconds": 156.65471564605832,
+      "enqueued_kernels": {
+        "mm_kernel": 11080
+      }
+    },
+    "combined": {
+      "validation": {
+        "atol": 0.001,
+        "rtol": 0.001,
+        "comparisons": 9,
+        "passed_comparisons": 9,
+        "failed_steps": [],
+        "violations": 0,
+        "passed": true
+      },
+      "selected": [
+        "_softmax",
+        "add.Tensor",
+        "bmm",
+        "cos",
+        "mul.Tensor",
+        "neg",
+        "silu",
+        "sin",
+        "where.self"
+      ],
+      "operator_calls": {
+        "where.self": 9,
+        "mul.Tensor": 3573,
+        "cos": 9,
+        "sin": 9,
+        "add.Tensor": 2277,
+        "neg": 504,
+        "bmm": 504,
+        "_softmax": 252,
+        "silu": 252
+      },
+      "python_tensor_readbacks": [],
+      "comparisons": [
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 3494528,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        },
+        {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "passed": true,
+          "elements": 151936,
+          "violations": 0,
+          "nonfinite": 0,
+          "max_abs": 0.0,
+          "max_scaled_error": 0.0
+        }
+      ],
+      "elapsed_seconds": 3.9959857780486345,
+      "enqueued_kernels": {
+        "add_func_no_alpha_kernel_rank_4": 56,
+        "bmm_kernel": 504,
+        "silu_forward_kernel_rank_1": 252,
+        "softmax_kernel_inner": 252,
+        "mul_func_kernel_rank_3_stride_constexpr": 1035,
+        "where_inner_kernel_rank_4_stride_constexpr": 9,
+        "neg_func_kernel_rank_4": 56,
+        "mul_func_scalar_kernel_rank_1": 270,
+        "sin_func_kernel_rank_1": 9,
+        "mul_func_kernel_rank_4_stride_constexpr": 2016,
+        "mul_func_kernel_rank_1": 252,
+        "add_func_no_alpha_kernel_rank_1": 952,
+        "neg_func_kernel_rank_4_stride_constexpr": 448,
+        "add_func_no_alpha_kernel_rank_4_stride_constexpr": 252,
+        "add_func_tensor_scalar_kernel_rank_1": 1017,
+        "cos_func_kernel_rank_1": 9
+      }
+    }
+  },
+  "individually_passing": [
+    "mul.Tensor",
+    "add.Tensor",
+    "neg",
+    "cos",
+    "sin",
+    "where.self",
+    "silu",
+    "_softmax",
+    "bmm"
+  ],
+  "admitted_kernel_sources": {
+    "mul_func_kernel_rank_3_stride_constexpr": {
+      "kernel": "mul_func_kernel_rank_3_stride_constexpr",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_1224fa7b182eedc61225d46303f45986b020e2e226288a6871026875f79cb0a1.py",
+      "sha256": "1224fa7b182eedc61225d46303f45986b020e2e226288a6871026875f79cb0a1",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "mul_func",
+      "jit_sha256": "d1b9b02a98acd27b3ebb7beb283ccd7b340922bf2ddadfa775d764b7732d52c5"
+    },
+    "mul_func_scalar_kernel_rank_1": {
+      "kernel": "mul_func_scalar_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_c61d37af7948f00d2bcc59cdf692abb823601cbb2602bafbbc30fd5f1a8e8faf.py",
+      "sha256": "c61d37af7948f00d2bcc59cdf692abb823601cbb2602bafbbc30fd5f1a8e8faf",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "mul_func_scalar",
+      "jit_sha256": "8fd9c91c80fd63f0110a2b421ece94ef9840e54b6e019f1ee589778670b27c4f"
+    },
+    "mul_func_kernel_rank_4_stride_constexpr": {
+      "kernel": "mul_func_kernel_rank_4_stride_constexpr",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_71b192a93df122b931a462a3c43f8499ebe3ce18d982ffda71ed35345465c4f4.py",
+      "sha256": "71b192a93df122b931a462a3c43f8499ebe3ce18d982ffda71ed35345465c4f4",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "mul_func",
+      "jit_sha256": "475756bdb88ad19c7fba2d57bbd465dea954438392b0e8f0f38caa383ce38365"
+    },
+    "mul_func_kernel_rank_1": {
+      "kernel": "mul_func_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_1138c4d719b8827b3b005456bb59d6d82b0600b9e5211c5bc9b8a29853265968.py",
+      "sha256": "1138c4d719b8827b3b005456bb59d6d82b0600b9e5211c5bc9b8a29853265968",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "mul_func",
+      "jit_sha256": "c039c72da4d11bd880b9e1f1e5d78bff56f7cfef3ee500d72889a6478989123d"
+    },
+    "add_func_tensor_scalar_kernel_rank_1": {
+      "kernel": "add_func_tensor_scalar_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_8df1c18546b710ad8aac905513e97d45f54bec69218a2d323afd2093a6d97b14.py",
+      "sha256": "8df1c18546b710ad8aac905513e97d45f54bec69218a2d323afd2093a6d97b14",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "add_func_tensor_scalar",
+      "jit_sha256": "fd264a7057883251acd7786354c30593670549b7e40959fcad072e1ee49c18c9"
+    },
+    "add_func_no_alpha_kernel_rank_1": {
+      "kernel": "add_func_no_alpha_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_2344551ba705f8ab90f5fd356daf8d5b7f3793eb49d52affcc435b2506d8d94f.py",
+      "sha256": "2344551ba705f8ab90f5fd356daf8d5b7f3793eb49d52affcc435b2506d8d94f",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "add_func_no_alpha",
+      "jit_sha256": "4cba9d98a592fc2d8f2c228daf28488d89eca47e369d81dc64cfa47438eebd02"
+    },
+    "add_func_no_alpha_kernel_rank_4_stride_constexpr": {
+      "kernel": "add_func_no_alpha_kernel_rank_4_stride_constexpr",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_a8ac0e8423b90d4a927366a4703947356bd6358ef10dc5933d60bc2c2a061f6d.py",
+      "sha256": "a8ac0e8423b90d4a927366a4703947356bd6358ef10dc5933d60bc2c2a061f6d",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "add_func_no_alpha",
+      "jit_sha256": "2ad94242a16ff102d7d2eb9de5811d7c8cedc4edb4dffac641bfb81e6c6e8b7e"
+    },
+    "neg_func_kernel_rank_4": {
+      "kernel": "neg_func_kernel_rank_4",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_ab0f14b3dce2c7ffcbb7535f9e847ff1c642c07a888dd7c448d69a8318ffc6d3.py",
+      "sha256": "ab0f14b3dce2c7ffcbb7535f9e847ff1c642c07a888dd7c448d69a8318ffc6d3",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "neg_func",
+      "jit_sha256": "777c962496313eea451fc0ea61de2800b995fdf876d42c51437becbd0cfcaf94"
+    },
+    "neg_func_kernel_rank_4_stride_constexpr": {
+      "kernel": "neg_func_kernel_rank_4_stride_constexpr",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_ab0f14b3dce2c7ffcbb7535f9e847ff1c642c07a888dd7c448d69a8318ffc6d3.py",
+      "sha256": "ab0f14b3dce2c7ffcbb7535f9e847ff1c642c07a888dd7c448d69a8318ffc6d3",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "neg_func",
+      "jit_sha256": "3d6cf7d9a1b950bf7b2f9059faf1dcd1a3080d83a05d0cba6c63748c630fb348"
+    },
+    "pow_func_tensor_scalar_kernel_rank_1": {
+      "kernel": "pow_func_tensor_scalar_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_a48537db63b7fa606e6e3fca39385ca48df6eaeb5fc6ee9558753d52e3ee9379.py",
+      "sha256": "a48537db63b7fa606e6e3fca39385ca48df6eaeb5fc6ee9558753d52e3ee9379",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "pow_func_tensor_scalar",
+      "jit_sha256": "849d113e4bfa5f2f7165ab881d557015ecb3a2077ae1b6b95d86430dae6810d5"
+    },
+    "cos_func_kernel_rank_1": {
+      "kernel": "cos_func_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_285902103adbb00bf3593b4e319e5ae4a6c9efc619583810d2677881700461da.py",
+      "sha256": "285902103adbb00bf3593b4e319e5ae4a6c9efc619583810d2677881700461da",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "cos_func",
+      "jit_sha256": "8b8505fa16fc8ab3d5a75f68b8a9e99f36e4c6f4bf5b19fec025b5f8560bdbf6"
+    },
+    "sin_func_kernel_rank_1": {
+      "kernel": "sin_func_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_1e3415b4019698ee9f26637c5f66a1ef0ff6606515414aeff2eee667e87974b2.py",
+      "sha256": "1e3415b4019698ee9f26637c5f66a1ef0ff6606515414aeff2eee667e87974b2",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "sin_func",
+      "jit_sha256": "4cc04ed8473b2cea9ccbff662e246533669505912e7be0113d926739356750ce"
+    },
+    "rsqrt_func_kernel_rank_1": {
+      "kernel": "rsqrt_func_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_7e11247eadafbfacfd8e315a44ea8fbed013aab2d13dd5e40480415a54a6e1b6.py",
+      "sha256": "7e11247eadafbfacfd8e315a44ea8fbed013aab2d13dd5e40480415a54a6e1b6",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "rsqrt_func",
+      "jit_sha256": "93c9402fb904f8f471e138cbb181f4b5c4b36ba84ee9989a2906a2e326c24e32"
+    },
+    "cat_copy_row_kernel_4": {
+      "kernel": "cat_copy_row_kernel_4",
+      "source": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/cat.py",
+      "sha256": "28689acb0e0e37bad15b30a442c2685aa607c60c91255ab1736a0995b1008224",
+      "jit_sha256": "deb2a3e12cc0b877eccb6036773a0e571ca842ca67926f34b03eb716448eeaeb"
+    },
+    "where_inner_kernel_rank_4_stride_constexpr": {
+      "kernel": "where_inner_kernel_rank_4_stride_constexpr",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_fee9f26a1f6629181dd0ca24e5b46a4ae04903e78cd70c1da01bf444a1b36400.py",
+      "sha256": "fee9f26a1f6629181dd0ca24e5b46a4ae04903e78cd70c1da01bf444a1b36400",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "where_inner",
+      "jit_sha256": "eb785a2dd69079f84550445b17e0a42d2298e9b8b30523a2111c0bc981aba411"
+    },
+    "mean_kernel_dim_low": {
+      "kernel": "mean_kernel_dim_low",
+      "source": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mean.py",
+      "sha256": "a946edf3b424087cd309a09c381c6f3526dd2982c332cd833142256eeb49a787",
+      "jit_sha256": "1ad86813b3f63cbf92f065c43354f12307ffa8c9a6b712daee311474b460f43e"
+    },
+    "silu_forward_kernel_rank_1": {
+      "kernel": "silu_forward_kernel_rank_1",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_43f2c1dab4762d11543ca63510f65929870d531c428497ccc83f3d13ecd0ae23.py",
+      "sha256": "43f2c1dab4762d11543ca63510f65929870d531c428497ccc83f3d13ecd0ae23",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "silu_forward",
+      "jit_sha256": "9c17675e3ea7ff5b997a2a13e2657e60b2038c9e1b9e2698391dc8e3de74547f"
+    },
+    "softmax_kernel_inner": {
+      "kernel": "softmax_kernel_inner",
+      "source": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/softmax.py",
+      "sha256": "9d763b991b812c26b47117f0f6020c6c6fcb12bbcd96babdf0624dda36bfcb41",
+      "jit_sha256": "03931312a47983d8d65da2879d92946bfcd318b391063ea16b57149375258be7"
+    },
+    "bmm_kernel": {
+      "kernel": "bmm_kernel",
+      "source": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/bmm.py",
+      "sha256": "17dd1ce7a1f354b52abfde2aa0ee0bd48c380e4dfa7e629e396f0c5f9770ac76",
+      "jit_sha256": "1129d57964a0db6555820cf7a7271044e319cb5559bfa1bd4eb5d68a555698e5"
+    },
+    "mm_kernel": {
+      "kernel": "mm_kernel",
+      "source": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mm.py",
+      "sha256": "90ba744b7006d8078b726a97d07f01ce6d72c836551b439362dae68ea639724b",
+      "jit_sha256": "bb755b457899a96ef7a7e34ad449c9eb60dd80e3b341e8411f77a4b22240cf54"
+    },
+    "add_func_no_alpha_kernel_rank_4": {
+      "kernel": "add_func_no_alpha_kernel_rank_4",
+      "source": "/root/.flaggems/code_cache/native_host_kernel_a8ac0e8423b90d4a927366a4703947356bd6358ef10dc5933d60bc2c2a061f6d.py",
+      "sha256": "a8ac0e8423b90d4a927366a4703947356bd6358ef10dc5933d60bc2c2a061f6d",
+      "generator": "gcu300.utils.pointwise_dynamic.KernelGenerator",
+      "scalar_kernel": "add_func_no_alpha",
+      "jit_sha256": "791d961462661fcf05a1e0f463a9de2b041670a6246920e2d754b8830cd82bfe"
+    }
+  }
+}

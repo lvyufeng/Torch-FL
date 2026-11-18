@@ -1,0 +1,1053 @@
+{
+  "schema_version": 3,
+  "date": "2026-11-18",
+  "timezone": "Asia/Shanghai",
+  "scope": "FlagGems-first complete Qwen3-0.6B eager inference on the measured published Enflame cohort. Median performance acceptance; no general platform coverage claim.",
+  "source": {
+    "base_revision": "eba6b82e95b4ae3cc7f1784c54fd8724596f3845",
+    "candidate": "Uncommitted working-tree implementation. All 39 changed source/config/test files match the remote tree. Repeated generation preserves every verified artifact hash.",
+    "source_sha256_verified_against_remote": {
+      "benchmarks/host_compiler/configs/enflame_native_host.conf": "8b999eb2b97b8052a64d8aa2f54d58ff7e6c34ec4ab432fc34ba3d1f99598d37",
+      "benchmarks/host_compiler/enflame_api_trace.cc": "e27d73dadada6994af643f0f1c76b84f2320c0cfa1182e9fef90b24ca05e550e",
+      "benchmarks/host_compiler/enflame_flaggems_probe.py": "052c61d9ff7d4068876d888a4b5fbb7cfd3c9ff9e47ad80e5a93fa61c5b2572e",
+      "benchmarks/host_compiler/enflame_profile_summary.py": "0423fe6f3bd984c932eb8472a925f348e903bbec25bb0fa285f2d803daee61c9",
+      "benchmarks/host_compiler/qwen_eager.py": "fd93e3625d6cd3c9c983723b1bcc5e47d03a1ae71359a2dc7b6fc24fbcc27f00",
+      "benchmarks/host_compiler/qwen_operator_census.py": "e3f719daad90e54abf4d2244a06beda64ff827b8d504219a67d9b15e1bb410ac",
+      "benchmarks/host_compiler/qwen_operator_snapshot.py": "75a257683ea28abf67b0b3648933c7856c848caa803e434e5a7ae70cb94403ac",
+      "benchmarks/host_compiler/qwen_strict_eager.py": "2ad984ee31db2fc07ce024ffdff8d4dea92803764b26b52d3ee7bd41f50028e2",
+      "csrc/aten/backends/enflame/gcu_copy.cc": "c923a0143999c26b7cff9ba47b19ca1e7e60a21213096a54bbc4ed307f3e259c",
+      "csrc/aten/backends/enflame/gcu_copy.h": "6318cc533493969fdcf0e7ffc427216e5e230291542a325735bd248497420c30",
+      "csrc/aten/backends/enflame/generated/gcu_flaggems_register.inc": "1cfd3ce0e984389fe5150011e8e0bc79974b1962f0d0549bce8bed08ccf55eeb",
+      "csrc/aten/backends/enflame/generated/gcu_kernels.cc": "adb4c523341b94b8eefa81c0144317bf5959d850324d76a6efddf042a3dbabb5",
+      "csrc/aten/backends/enflame/generated/gcu_register.inc": "839cef4b855125a00cab68263a365b86da0d557d79af700c57cc61637f8d82c3",
+      "csrc/aten/backends/enflame/topsaten_common.h": "5a4d706298f7565f8fe2e564152c26b171fe90cdcca55f976750c26c1a4fc94d",
+      "csrc/runtime/accelerator/enflame/interop.cc": "ab726c33b24b0322e47fc7932bc48e1a9f4899697db23573d10b6315a8665496",
+      "csrc/runtime/accelerator/enflame/interop.h": "c596d7cab31f887daf183b84e2f8b36741f417b9701a50e6f42d7c2bb5b4671a",
+      "csrc/runtime/accelerator/enflame/stream.cc": "913a45e31e4357e72d41cbe2f21f9adbd44e1392c8d90b01734e03e60883eaf6",
+      "scripts/codegen/codegen_gcu.py": "02cb2f24293af352113abe33da332d16ca15d90e3055f5e0b4ed64e79fe5956c",
+      "scripts/codegen/gen_vendor_confs.py": "74990d599a1246f56a2a802f8fefae78a893bb3e4509067fa673a1a8a8404abd",
+      "tests/integration/flaggems/flaggems_caps.py": "beec21f00180f3978c8800719d0500480c729c8cf57b222e509b8663e4df495c",
+      "tests/integration/ops/conftest.py": "4ffacf7a82fdaca30b2553d501baead9cf274ce53b1edcc464e742fd45d2e791",
+      "tests/integration/ops/test_enflame_native_hosts.py": "3e31c445dd115dfacdca84789ef3bd01ae7f14510d5cb4b2453a270ae6028092",
+      "tests/unit/test_conf_registration_consistency.py": "75722b00e8cbb04095b19ef06d4f471132361cf755a85b1f3954961f8b3e686a",
+      "tests/unit/test_enflame_stream_interop.py": "0df51d1e722a71cc7c5704a682bad378df730d0008ebb0457f1eceb004b801b0",
+      "tests/unit/test_gen_vendor_confs.py": "cf58416d634c30fc7bb44707dd8434c703cd7aaf91761ca4ef3199df92f62448",
+      "tests/unit/test_native_host_backend.py": "03ff8e9456915ca9cd0efa5fa16b173cf310ee9c3519312699abef1bb76de834",
+      "tests/unit/test_native_host_ir.py": "6dca87ad7dfbb3c299fa17d59c200fb65bbb127175d899958f5fca17935d1bb2",
+      "tests/unit/test_native_host_source.py": "f394c3116022a3b44a188666c14abaf98b795d17a5f404142186a8331e0e6246",
+      "tests/unit/test_ops_conftest_platform.py": "61262dbfeb10c60e7afc179260b23eebeccca801dbeabb4e73482260d0153f09",
+      "tests/unit/test_setup_build.py": "66551c8d2b76690031daba3360cff42839526960cef7a33581724061a048181a",
+      "torch_fl/configs/backends_enflame.conf": "36ef70d5122ed4c73b54add9c385c1bad09b1bfa9f2c824402d1cc71d78c4f11",
+      "torch_fl/native_host/backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+      "torch_fl/native_host/backends/enflame.py": "fcebec021541d97917eb0e63e73b8dcf1b3f3730ef893f7fd9f6efe1c52397d6",
+      "torch_fl/native_host/build.py": "55463e6c60190da7cad6f73542482fd3faa7c29e674335bc4bf2b126cf5bc09c",
+      "torch_fl/native_host/compiler/frontend.py": "cff78cd55a5752609b282e7509f0301133c8b4f50778e75959fb258541c6d7bb",
+      "torch_fl/native_host/csrc/backends/enflame.cc": "6b2d0f494f1de5c4262a0c07b1802fe0ce885593e5752327301cdde6e9c88f53",
+      "torch_fl/native_host/csrc/launcher.cc": "e11c44cfab44bbad230d99d241e3efd85004144af42842bb0c81de8a524f9114",
+      "torch_fl/native_host/load.py": "a08e238e88d62b916e9f6119e7a6c6e0c20b303ce8f8b8199b573710c541bed4",
+      "torch_fl/native_host/runtime.py": "313622008e8c90e9c13739b3e1e88084313b2536027170f91ac7103ca7bfec89"
+    }
+  },
+  "historical_vendor_only_result": "enflame_native_host_optimized.json; its 121.5%/118.5% result does not qualify FlagGems numerical kernels.",
+  "acceptance": {
+    "adapter_build": "passed",
+    "wheel_preflight": "passed",
+    "hardware_conformance_flaggems_config": "67 passed, no skips",
+    "hardware_conformance_default_config": "67 passed, no skips",
+    "full_model_completed": true,
+    "vendor_exit_code": 0,
+    "native_exit_code": 0,
+    "performance_80_percent_passed": true,
+    "vendor_logits_passed": true,
+    "observed_model_cpu_tensor_fallbacks_removed": true,
+    "actual_flaggems_device_submissions_observed": true,
+    "accepted_for_measured_workload_and_cohort": true
+  },
+  "performance": {
+    "prefill": {
+      "vendor_complete_ms": 51.39673314988613,
+      "native_complete_ms": 62.199853360652924,
+      "vendor_submit_ms": 50.75751803815365,
+      "native_submit_ms": 61.55198812484741,
+      "relative_performance": 0.8263159858572794,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 64.24591643735766,
+      "latency_headroom_ms": 2.0460630767047405,
+      "passed": true,
+      "observations": 7,
+      "native_min_ms": 61.94709241390228,
+      "native_max_ms": 70.64414396882057,
+      "native_p95_ms": 68.15635152161121
+    },
+    "decode": {
+      "vendor_complete_ms": 45.08535843342543,
+      "native_complete_ms": 55.87196163833141,
+      "vendor_submit_ms": 44.39876787364483,
+      "native_submit_ms": 55.20938616245985,
+      "relative_performance": 0.8069406749179583,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 56.35669804178178,
+      "latency_headroom_ms": 0.48473640345036983,
+      "passed": true,
+      "observations": 56,
+      "native_min_ms": 55.526457726955414,
+      "native_max_ms": 66.38180837035179,
+      "native_p95_ms": 60.15252182260156
+    }
+  },
+  "accuracy": {
+    "scope": {
+      "prefill": "all_positions",
+      "decode": "every_requested_step"
+    },
+    "validation": {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "comparisons": 9,
+      "passed_comparisons": 9,
+      "failed_steps": [],
+      "violations": 0,
+      "passed": true
+    },
+    "maximum_absolute_error": 0.0,
+    "independent_bitwise_verification": {
+      "full_prefill_logits": true,
+      "every_last_token_logits": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "every_decode_input": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "prompt_ids": true,
+      "contracts_equal": true,
+      "array_lengths_equal": true,
+      "artifact_sha256": {
+        "vendor-final": "8c91f510d79f56d339fde6183800309b1d72ce840c97d210ab96b0e640b5d035",
+        "native-final": "bff8d91f74ebe59c65fa6be047daad3c2a8f0b13bd18006c8832ad67eda127b6"
+      }
+    },
+    "generated_tokens": [
+      785,
+      12884,
+      7952,
+      6303,
+      1576,
+      315,
+      279,
+      1616
+    ],
+    "generated_text": "The sky appears blue because of the way",
+    "vendor_generation_equal": true,
+    "contract_equal": true,
+    "math_settings_unchanged": true
+  },
+  "flaggems_execution": {
+    "direct_model_routes": [
+      "mul.Tensor",
+      "add.Tensor",
+      "neg",
+      "cos",
+      "sin",
+      "where.self",
+      "silu",
+      "_softmax",
+      "bmm"
+    ],
+    "composed_model_routes": {
+      "pow.Tensor_Scalar": "Generated GCU scalar-pow category delegates FP32 exponent 2 to the selected mul.Tensor route. Other exponents/dtypes retain topsaten."
+    },
+    "successful_submissions": 87032,
+    "submitted_kernel_names": 19,
+    "enqueued_kernels": {
+      "neg_func_kernel_rank_4_stride_constexpr": 4536,
+      "silu_forward_kernel_rank_1": 2576,
+      "add_func_no_alpha_kernel_rank_1": 9688,
+      "add_func_no_alpha_kernel_rank_4_stride_constexpr": 2576,
+      "bmm_kernel": 5152,
+      "mul_func_scalar_kernel_rank_1": 2760,
+      "neg_func_kernel_rank_1": 552,
+      "sin_func_kernel_rank_1": 92,
+      "mul_func_kernel_rank_4_stride_constexpr": 20608,
+      "softmax_kernel_inner": 2576,
+      "where_inner_kernel_rank_2_stride_constexpr": 184,
+      "mul_func_kernel_rank_3_stride_constexpr": 10580,
+      "where_inner_kernel_rank_1": 276,
+      "where_inner_kernel_rank_4_stride_constexpr": 184,
+      "neg_func_kernel_rank_4": 616,
+      "mul_func_kernel_rank_1": 12972,
+      "cos_func_kernel_rank_1": 92,
+      "add_func_tensor_scalar_kernel_rank_1": 10396,
+      "add_func_no_alpha_kernel_rank_4": 616
+    },
+    "counter_scope": "Entire final candidate process: accuracy, sampling, warm-up, seven timing repetitions and warm-host audit; not a per-forward count. Incremented only after a successful SDK enqueue, separately from launcher construction.",
+    "published_numerical_sources_unchanged": true,
+    "vendor_holds": {
+      "mean.dim": "Isolated substitution fails the unchanged full-logit tolerance.",
+      "rsqrt": "Isolated substitution fails the unchanged full-logit tolerance.",
+      "mm": "Isolated substitution fails the unchanged full-logit tolerance.",
+      "cat": "Published GCU kernel fails compilation on mixed cache-concatenation sizes: dim_size_in branch int32/int64 mismatch.",
+      "add.Tensor Int32/Int64": "Floating add is FlagGems; int32 and int64 route to Enflame. Int32 FlagGems add failed the real int64 carry/word composition (72/81 tensor-tensor results); the dtype guard restores that integration case."
+    },
+    "isolated_precision_diagnostics": {
+      "mean.dim": {
+        "isolated_validation": {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "comparisons": 9,
+          "passed_comparisons": 0,
+          "failed_steps": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "violations": 2800442,
+          "passed": false
+        },
+        "max_abs_logit_error": 1.0,
+        "actual_submissions": 1017
+      },
+      "rsqrt": {
+        "isolated_validation": {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "comparisons": 9,
+          "passed_comparisons": 0,
+          "failed_steps": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "violations": 3818323,
+          "passed": false
+        },
+        "max_abs_logit_error": 1.0,
+        "actual_submissions": 1017
+      },
+      "pow.Tensor_Scalar": {
+        "isolated_validation": {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "comparisons": 9,
+          "passed_comparisons": 0,
+          "failed_steps": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "violations": 3315234,
+          "passed": false
+        },
+        "max_abs_logit_error": 0.5078125,
+        "actual_submissions": 1017
+      },
+      "mm": {
+        "isolated_validation": {
+          "atol": 0.001,
+          "rtol": 0.001,
+          "comparisons": 9,
+          "passed_comparisons": 0,
+          "failed_steps": [
+            0,
+            1,
+            2,
+            3,
+            4,
+            5,
+            6,
+            7,
+            8
+          ],
+          "violations": 4263896,
+          "passed": false
+        },
+        "max_abs_logit_error": 0.9375,
+        "actual_submissions": 11080
+      }
+    },
+    "square_composition_probe_submissions": 1017,
+    "zero_launch_control": "Generic square-via-multiply reproduces all logits but submits zero FlagGems kernels and is not admitted. The historical generic probe individually_passing field was accuracy-only; use per-case submissions, not that field."
+  },
+  "cpu_fallback_audit": {
+    "report": "enflame_flaggems_full_forward_api.json",
+    "scope": "One warmed full prefill and all eight cached decode steps, forward indices 9..17; hooks exclude benchmark logit reads and checkpoint loading. No diagnostic TorchDispatchMode is active.",
+    "forward_count": 9,
+    "python_model_readbacks": [],
+    "only_scalar_bool_readbacks": true,
+    "device_to_host": [
+      {
+        "kind": 2,
+        "bytes": 1,
+        "roots": [
+          "at::native::flagos::EmbeddingKernelGcu"
+        ],
+        "calls": 9
+      },
+      {
+        "kind": 2,
+        "bytes": 1,
+        "roots": [
+          "at::native::flagos::gcu::DtypeCast"
+        ],
+        "calls": 9
+      }
+    ],
+    "other_transfers": [
+      {
+        "kind": 3,
+        "bytes": 4,
+        "roots": [
+          "at::native::flagos::gcu::DtypeCast",
+          "at::native::flagos::ArangeKernelGcu"
+        ],
+        "calls": 68
+      },
+      {
+        "kind": 1,
+        "bytes": 2,
+        "roots": [],
+        "calls": 9
+      },
+      {
+        "kind": 3,
+        "bytes": 4,
+        "roots": [
+          "at::native::flagos::AddTensorKernelGcu"
+        ],
+        "calls": 32
+      }
+    ],
+    "interpretation": "18 one-byte booleans from embedding bounds and dtype-cast range predicates. No model tensor CPU numerical fallback observed across prefill and all eight decode steps. The nine two-byte H2D transfers are scalar constants; 100 four-byte D2D transfers keep int64 word composition on device.",
+    "api_counts": {
+      "topsGetDevice": 202316,
+      "topsLaunchKernel": 9788,
+      "topsEventRecord": 13446,
+      "topsStreamWaitEvent": 13446,
+      "topsModuleLaunchKernel": 8514,
+      "topsSetDevice": 1658,
+      "topsStreamSynchronize": 127,
+      "topsMemcpy": 127
+    }
+  },
+  "profiling": {
+    "diagnostic_only": true,
+    "note": "Device traces and forwarding API observer are separate instrumented runs; none contributes to performance acceptance. Device-idle remainder includes host submission, waits and profiler overhead, not pure Python time.",
+    "native": {
+      "schema_version": 1,
+      "diagnostic_only": true,
+      "timing_note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+      "device_profile": {
+        "artifact": {
+          "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/native-device.trace.json",
+          "sha256": "394e686deb05fdb7e69ed7d6237b95651f699fd304880646c962e8b00df2c210"
+        },
+        "scopes": {
+          "prefill": {
+            "profiled_wall_ms": 84.725019,
+            "kernel_count": 2174,
+            "kernel_sum_ms": 43.392998,
+            "copy_count": 7,
+            "copy_sum_ms": 0.14110999999999999,
+            "device_busy_union_ms": 43.53411962890625,
+            "host_or_device_idle_ms": 41.19089937109375,
+            "top_kernels": [
+              {
+                "name": "softmax_kernel_inner",
+                "calls": 28,
+                "duration_ms": 7.402039999999999
+              },
+              {
+                "name": "_Z35matmul_kernel_lhs_all_in_l1_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+                "calls": 197,
+                "duration_ms": 6.592691
+              },
+              {
+                "name": "mul_func_kernel_rank_4_stride_constexpr",
+                "calls": 224,
+                "duration_ms": 4.5744430000000005
+              },
+              {
+                "name": "mul_func_kernel_rank_1",
+                "calls": 141,
+                "duration_ms": 2.087967000000001
+              },
+              {
+                "name": "_Z9transposeILi3ELi2EL16TransposePattern3EEvPvS1_S1_15TransposeParams",
+                "calls": 168,
+                "duration_ms": 2.0795600000000007
+              },
+              {
+                "name": "bmm_kernel",
+                "calls": 56,
+                "duration_ms": 2.0253079999999994
+              },
+              {
+                "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+                "calls": 141,
+                "duration_ms": 1.9396829999999998
+              },
+              {
+                "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+                "calls": 143,
+                "duration_ms": 1.9163569999999999
+              },
+              {
+                "name": "mul_func_kernel_rank_3_stride_constexpr",
+                "calls": 115,
+                "duration_ms": 1.666301
+              },
+              {
+                "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+                "calls": 113,
+                "duration_ms": 1.6341149999999998
+              },
+              {
+                "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+                "calls": 113,
+                "duration_ms": 1.4705509999999997
+              },
+              {
+                "name": "add_func_tensor_scalar_kernel_rank_1",
+                "calls": 113,
+                "duration_ms": 1.1693770000000006
+              },
+              {
+                "name": "add_func_no_alpha_kernel_rank_4",
+                "calls": 56,
+                "duration_ms": 1.001224
+              },
+              {
+                "name": "neg_func_kernel_rank_4",
+                "calls": 56,
+                "duration_ms": 0.8637499999999999
+              },
+              {
+                "name": "_Z19slice_and_transposeILi3ELi2EEvPvS0_23SliceAndTransposeParams",
+                "calls": 56,
+                "duration_ms": 0.7868719999999999
+              },
+              {
+                "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+                "calls": 56,
+                "duration_ms": 0.720942
+              },
+              {
+                "name": "add_func_no_alpha_kernel_rank_1",
+                "calls": 56,
+                "duration_ms": 0.6973799999999998
+              },
+              {
+                "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+                "calls": 56,
+                "duration_ms": 0.6833649999999999
+              },
+              {
+                "name": "add_func_no_alpha_kernel_rank_4_stride_constexpr",
+                "calls": 28,
+                "duration_ms": 0.5325880000000001
+              },
+              {
+                "name": "silu_forward_kernel_rank_1",
+                "calls": 28,
+                "duration_ms": 0.44676799999999994
+              }
+            ]
+          },
+          "decode": {
+            "profiled_wall_ms": 77.071405,
+            "kernel_count": 2016,
+            "kernel_sum_ms": 36.100097999999996,
+            "copy_count": 15,
+            "copy_sum_ms": 0.186101,
+            "device_busy_union_ms": 36.2861806640625,
+            "host_or_device_idle_ms": 40.7852243359375,
+            "top_kernels": [
+              {
+                "name": "mul_func_kernel_rank_3_stride_constexpr",
+                "calls": 115,
+                "duration_ms": 7.744225
+              },
+              {
+                "name": "_Z41matmul_kernel_lhs_all_in_l1_trans_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li1ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+                "calls": 197,
+                "duration_ms": 5.888283999999998
+              },
+              {
+                "name": "mul_func_kernel_rank_4_stride_constexpr",
+                "calls": 224,
+                "duration_ms": 2.9693050000000034
+              },
+              {
+                "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+                "calls": 141,
+                "duration_ms": 1.873251
+              },
+              {
+                "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+                "calls": 143,
+                "duration_ms": 1.7899159999999998
+              },
+              {
+                "name": "bmm_kernel",
+                "calls": 56,
+                "duration_ms": 1.6907170000000005
+              },
+              {
+                "name": "mul_func_kernel_rank_1",
+                "calls": 141,
+                "duration_ms": 1.5598889999999987
+              },
+              {
+                "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+                "calls": 112,
+                "duration_ms": 1.5443189999999996
+              },
+              {
+                "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+                "calls": 113,
+                "duration_ms": 1.4410519999999998
+              },
+              {
+                "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+                "calls": 113,
+                "duration_ms": 1.3643490000000005
+              },
+              {
+                "name": "add_func_no_alpha_kernel_rank_1",
+                "calls": 112,
+                "duration_ms": 1.2326009999999996
+              },
+              {
+                "name": "add_func_tensor_scalar_kernel_rank_1",
+                "calls": 113,
+                "duration_ms": 1.1944049999999997
+              },
+              {
+                "name": "neg_func_kernel_rank_4_stride_constexpr",
+                "calls": 56,
+                "duration_ms": 0.7742610000000001
+              },
+              {
+                "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+                "calls": 56,
+                "duration_ms": 0.6833919999999999
+              },
+              {
+                "name": "_Z12slice_kernelILi2ELi2ELi4EEvPvS0_11SliceParams",
+                "calls": 56,
+                "duration_ms": 0.6825950000000001
+              },
+              {
+                "name": "softmax_kernel_inner",
+                "calls": 28,
+                "duration_ms": 0.6473949999999998
+              },
+              {
+                "name": "_Z9transposeILi3ELi2EL16TransposePattern2EEvPvS1_S1_15TransposeParams",
+                "calls": 28,
+                "duration_ms": 0.445448
+              },
+              {
+                "name": "_Z20binary_tensor_kernelIN9cc_kernel2LTEhLb0ELb0ELb1ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+                "calls": 27,
+                "duration_ms": 0.335052
+              },
+              {
+                "name": "mul_func_scalar_kernel_rank_1",
+                "calls": 30,
+                "duration_ms": 0.319903
+              },
+              {
+                "name": "add_func_no_alpha_kernel_rank_4_stride_constexpr",
+                "calls": 28,
+                "duration_ms": 0.31332
+              }
+            ]
+          }
+        }
+      }
+    },
+    "vendor": {
+      "schema_version": 1,
+      "diagnostic_only": true,
+      "timing_note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+      "device_profile": {
+        "artifact": {
+          "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/vendor-device.trace.json",
+          "sha256": "b0a553cf687dc9e74d7e76d744553d4565355ecfe5f1382e31e7e1c03de64a07"
+        },
+        "scopes": {
+          "prefill": {
+            "profiled_wall_ms": 85.538151,
+            "kernel_count": 2188,
+            "kernel_sum_ms": 35.305801,
+            "copy_count": 1,
+            "copy_sum_ms": 0.054060000000000004,
+            "device_busy_union_ms": 35.359853515625,
+            "host_or_device_idle_ms": 50.178297484375,
+            "top_kernels": [
+              {
+                "name": "void matmul_kernel_lhs_all_in_l1_split_n<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+                "calls": 197,
+                "duration_ms": 6.479775000000002
+              },
+              {
+                "name": "void transpose<3, 2, (TransposePattern)3>(void*, void*, void*, TransposeParams)",
+                "calls": 308,
+                "duration_ms": 3.593792000000002
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::ADD, unsigned char, false, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 228,
+                "duration_ms": 3.0209170000000016
+              },
+              {
+                "name": "void to_kernel<tops::__ef_bfloat16, float>(tops::__ef_bfloat16*, float*, TO_OP_PARAS)",
+                "calls": 143,
+                "duration_ms": 2.0833630000000003
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, true>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.9731289999999997
+              },
+              {
+                "name": "void to_kernel<float, tops::__ef_bfloat16>(float*, tops::__ef_bfloat16*, TO_OP_PARAS)",
+                "calls": 141,
+                "duration_ms": 1.9664500000000003
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.8794590000000007
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::POW, unsigned char, false, false, false, false>(cc_kernel::POW, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.766909
+              },
+              {
+                "name": "void mean_kernel<float>(float*, float*, MEAN_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.695339999999999
+              },
+              {
+                "name": "void slice_and_transpose<3, 2>(void*, void*, SliceAndTransposeParams)",
+                "calls": 112,
+                "duration_ms": 1.5989849999999994
+              },
+              {
+                "name": "void unary_kernel<float, float, cc_kernel::RSQRT>(float*, float*, UNARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.537706999999999
+              },
+              {
+                "name": "void binary_b_dte_A_1_A_B_kernel<cc_kernel::MUL, unsigned char, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, unsigned long, BINARY_OP_PARAS)",
+                "calls": 56,
+                "duration_ms": 1.044287
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, true, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 57,
+                "duration_ms": 0.9681689999999998
+              },
+              {
+                "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::NEG>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+                "calls": 56,
+                "duration_ms": 0.7729730000000001
+              },
+              {
+                "name": "void concatenate_kernel<2, (ConcatenatePattern)0, 2ul, void*, void*>(void*, ConcatenateParams<2ul>, void*, void*)",
+                "calls": 56,
+                "duration_ms": 0.7168659999999999
+              },
+              {
+                "name": "void broadcast_single_thread_kernel<3, 2>(void*, void*, BroadcastParams)",
+                "calls": 56,
+                "duration_ms": 0.6803709999999998
+              },
+              {
+                "name": "void softmax_fwd_dim0_batch32_seq128_kernel<float, float, cc_kernel::SOFTMAX, 32>(float*, float*, int, int, int, int, unsigned int, unsigned int, SOFTMAX_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.563389
+              },
+              {
+                "name": "void matmul_kernel_all_in_l1_large_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, true, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.48677999999999993
+              },
+              {
+                "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::SILU>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.484414
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::ADD, unsigned char, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.46018500000000007
+              }
+            ]
+          },
+          "decode": {
+            "profiled_wall_ms": 76.84216,
+            "kernel_count": 1936,
+            "kernel_sum_ms": 30.091457,
+            "copy_count": 1,
+            "copy_sum_ms": 0.098744,
+            "device_busy_union_ms": 30.1901962890625,
+            "host_or_device_idle_ms": 46.6519637109375,
+            "top_kernels": [
+              {
+                "name": "void matmul_kernel_lhs_all_in_l1_trans_split_n<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 1, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+                "calls": 197,
+                "duration_ms": 5.791888000000005
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::ADD, unsigned char, false, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 228,
+                "duration_ms": 2.999333999999999
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 168,
+                "duration_ms": 2.696049
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, true>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.8700240000000004
+              },
+              {
+                "name": "void to_kernel<tops::__ef_bfloat16, float>(tops::__ef_bfloat16*, float*, TO_OP_PARAS)",
+                "calls": 143,
+                "duration_ms": 1.8521100000000004
+              },
+              {
+                "name": "void to_kernel<float, tops::__ef_bfloat16>(float*, tops::__ef_bfloat16*, TO_OP_PARAS)",
+                "calls": 141,
+                "duration_ms": 1.8071500000000005
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::POW, unsigned char, false, false, false, false>(cc_kernel::POW, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.679072
+              },
+              {
+                "name": "void mean_kernel<float>(float*, float*, MEAN_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.4813760000000002
+              },
+              {
+                "name": "void concatenate_kernel<2, (ConcatenatePattern)0, 2ul, void*, void*>(void*, ConcatenateParams<2ul>, void*, void*)",
+                "calls": 112,
+                "duration_ms": 1.4751840000000007
+              },
+              {
+                "name": "void slice_kernel<2, 2, 4>(void*, void*, SliceParams)",
+                "calls": 112,
+                "duration_ms": 1.441986
+              },
+              {
+                "name": "void unary_kernel<float, float, cc_kernel::RSQRT>(float*, float*, UNARY_OP_PARAS)",
+                "calls": 113,
+                "duration_ms": 1.3583770000000002
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::MUL, unsigned char, false, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 87,
+                "duration_ms": 1.2594300000000003
+              },
+              {
+                "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::NEG>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+                "calls": 56,
+                "duration_ms": 0.7268100000000002
+              },
+              {
+                "name": "void broadcast_single_thread_kernel<3, 2>(void*, void*, BroadcastParams)",
+                "calls": 56,
+                "duration_ms": 0.6854230000000001
+              },
+              {
+                "name": "void softmax_fwd_dim0_batch32_seq128_kernel<float, float, cc_kernel::SOFTMAX, 32>(float*, float*, int, int, int, int, unsigned int, unsigned int, SOFTMAX_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.561547
+              },
+              {
+                "name": "void matmul_kernel_all_in_l1_large_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, false, false, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.46249999999999997
+              },
+              {
+                "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::SILU>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.45579300000000006
+              },
+              {
+                "name": "void matmul_kernel_lhs_all_in_l1_trans_split_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 1, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.4283590000000001
+              },
+              {
+                "name": "void binary_broadcast_kernel<cc_kernel::ADD, unsigned char, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.425296
+              },
+              {
+                "name": "void binary_tensor_kernel<cc_kernel::MUL, tops::__ef_bfloat16, false, false, true, false>(cc_kernel::MUL, unsigned char*, unsigned char*, tops::__ef_bfloat16*, BINARY_OP_PARAS)",
+                "calls": 28,
+                "duration_ms": 0.420223
+              }
+            ]
+          }
+        }
+      }
+    },
+    "remaining_bottlenecks": {
+      "prefill_flaggems_softmax_ms": 7.40204,
+      "decode_flaggems_rank3_broadcast_mul_ms": 7.744225,
+      "event_record_api_cpu_ms_over_nine_forwards": 145.526721
+    },
+    "producer_barriers": "Stream interop ABI 2 records/waits per-stream TOPS events under a shared submission lock. ABI 1 retains transition drains; ordinary untracked builds retain legacy pre/post drains. First prefill/decode scopes reduce stream synchronizes from 2,582 in the initial FlagGems trial to 22 in the final configuration."
+  },
+  "workload": {
+    "model": "Qwen3-0.6B",
+    "layers": 28,
+    "parameters": 596049920,
+    "dtype": "bfloat16",
+    "execution": "eager",
+    "prompt_tokens": 23,
+    "decode_steps": 8,
+    "measured_repetitions": 7,
+    "warmup_repetitions": 1,
+    "cpu_affinity": [
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71
+    ],
+    "torch_threads": 1,
+    "contract": {
+      "version": 1,
+      "checkpoint_sha256": {
+        "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+      },
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "dtype": "bfloat16",
+      "attention": "eager",
+      "math_settings": {
+        "float32_matmul_precision": "highest",
+        "allow_tf32": false,
+        "allow_bf16_reduced_precision_reduction": true,
+        "allow_fp16_reduced_precision_reduction": true,
+        "environment": {
+          "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+          "NVIDIA_TF32_OVERRIDE": null,
+          "CUBLAS_WORKSPACE_CONFIG": null
+        }
+      }
+    }
+  },
+  "hardware": {
+    "asset_label": "S60",
+    "reported_device_name": "ZIXIAOC200",
+    "physical_device": 0,
+    "driver_version": "1.10.6",
+    "container": "lvyufeng-torch-fl",
+    "container_image": "registry-egc.enflame-tech.com/artifacts/torch_gcu:v2.10.0-TR3.7.107-ubuntu2204",
+    "sdk_packages": {
+      "topsruntime": "1.7.2.2402",
+      "topscc": "1.7.2.2402",
+      "topsaten": "3.6.20260403"
+    },
+    "tops_runtime_library": "/opt/tops/lib/libtopsrt.so.1.7"
+  },
+  "environment": {
+    "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+    "torch": "2.10.0+cpu",
+    "torch_cuda": null,
+    "torch_cxx11_abi": true,
+    "transformers": "5.19.0",
+    "flag_gems": "5.4.0",
+    "flagtree": "0.7.0+enflame3.6",
+    "triton": "3.6.0",
+    "flagcx": "0.14.0+tops1.9.10",
+    "cython_build_only": "3.2.4",
+    "vendor_torch_gcu": "2.10.0+3.7.20260408",
+    "dependencies": "Published wheels; no FlagGems/FlagTree/FlagCX source builds. Both provider environments share CPU-Torch and Hugging Face dependencies. Vendor process imports neither torch_fl nor flag_gems.",
+    "runtime_environment": {
+      "TORCH_DEVICE_BACKEND_AUTOLOAD": "0",
+      "PYTHONNOUSERSITE": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1"
+    }
+  },
+  "artifact": {
+    "filename": "torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl",
+    "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/src/dist/torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl",
+    "sha256": "61451a990ef2cf7a1de45840a9c0d5536c40e71e2b930204102957378f3f6655",
+    "sdk_version_verified": "1.7.2.2402",
+    "filename_note": "tops1.9.10 is the existing platform-table build variant, not the installed SDK version. The generated compatibility manifest records verified SDK 1.7.2.2402.",
+    "kernels": [
+      "flaggems",
+      "vendor"
+    ],
+    "published": false,
+    "backend_record": {
+      "schema_version": 1,
+      "abi_version": 1,
+      "vendor": "enflame",
+      "compiler_backend": "gcu",
+      "capabilities": 177,
+      "scratch_alignment": 256,
+      "slot_bytes": 128,
+      "slot_alignment": 128,
+      "native_source_sha256": "6194e37920898be5ae95849553d1e441edc957617690c1bd22528cc776a5d677",
+      "compiler_distribution": {
+        "name": "flagtree",
+        "version": "0.7.0+enflame3.6"
+      },
+      "utility_modules": [
+        "gcu_utils"
+      ],
+      "driver_sources": {
+        "backends/enflame/backend.py": "f3fb7ba077c9070598cc5da565741c7e8d6cac66f4ecac4f12f28fbdb93151b4",
+        "backends/enflame/driver.py": "023f2668b139e0d4ed71855c6a69a9b2c520129f2c8a052cb92b8c0290b2fdb0",
+        "backends/enflame/utils/gcu.cpp": "1449b98b34f2f0d40891bb69c33c9e956427664730dc9a9cf60aa3c07ab60e82",
+        "backends/enflame/compiler.py": "d295cd88485a1291922b234abd996ba065f732c527c89bcd9dfd1c887f11ab3c",
+        "backends/enflame/VERSION": "7489df2e853756006b398564f8ad88c2726de658dad26d64883ed2f03a3be642"
+      },
+      "adapter_sources": {
+        "backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+        "backends/enflame.py": "fcebec021541d97917eb0e63e73b8dcf1b3f3730ef893f7fd9f6efe1c52397d6"
+      },
+      "native_sources": {
+        "csrc/launcher.cc": "e11c44cfab44bbad230d99d241e3efd85004144af42842bb0c81de8a524f9114",
+        "csrc/backend_api.h": "718684df8768c47b192e2d516c9679f26f30b6fd55abeb4a65ee1e89c7e501c3",
+        "csrc/host_abi.h": "ce8daf1c3b9e683b3d28b0536d2671cc42207bc1e111e6229b4ab3e837ea391a",
+        "csrc/backends/enflame.cc": "6b2d0f494f1de5c4262a0c07b1802fe0ce885593e5752327301cdde6e9c88f53"
+      }
+    },
+    "experiment_config": "benchmarks/host_compiler/configs/enflame_native_host.conf",
+    "experiment_config_sha256": "8b999eb2b97b8052a64d8aa2f54d58ff7e6c34ec4ab432fc34ba3d1f99598d37"
+  },
+  "verification": {
+    "ruff_check": {
+      "output": "All checks passed!",
+      "exit_code": 0
+    },
+    "ruff_format": {
+      "output": "631 files already formatted",
+      "exit_code": 0
+    },
+    "linux_unit_output": "478 passed, 116 warnings in 34.02s",
+    "hardware_flaggems_output": "67 passed, 15 warnings in 26.38s",
+    "hardware_default_output": "67 passed, 15 warnings in 26.41s",
+    "hardware_scope": "Installed wheel imported outside the checkout. Twelve cases compare published launch plans, not numerical int64 FlagGems coverage. Includes live outputs, nondefault streams and 40 mixed-producer iterations.",
+    "unit_environment_note": "Unset the build-only FLAGOS_SDK_VERSION before generic setup tests. The first ambient-environment run failed an SDK-is-unknown fixture; the clean-environment full run passes.",
+    "preflight_exit_code": 0,
+    "source_hashes_match_remote": true,
+    "generator_idempotency": "Repeated GCU generation and all config/registration checks pass with an unchanged 39-file source/config/test hash set.",
+    "graph_capture_calls": 0,
+    "raw_report_hashes_match_remote": true,
+    "device_idle_after_work": "EFSMI pmon reports no device process after the final hardware test and diagnostics."
+  },
+  "raw_reports": {
+    "qwen3_enflame_flaggems_final.json": {
+      "path": "benchmarks/host_compiler/results/qwen3_enflame_flaggems_final.json",
+      "sha256": "f316d5b9b85e2facce7152441323498c371da1409235a6e2f34b1217b701b8ef",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/native-final.json"
+    },
+    "qwen3_enflame_vendor_flaggems_comparison.json": {
+      "path": "benchmarks/host_compiler/results/qwen3_enflame_vendor_flaggems_comparison.json",
+      "sha256": "58a899613df1f925eac834ffdc6fec7952edc3a5e07c31765c39e17a6211178e",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/vendor-final.json"
+    },
+    "enflame_flaggems_bitwise_verification.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_bitwise_verification.json",
+      "sha256": "c1a4bd8a77db523d2c800099463b6e8c8de23153b6e3482dd235e6e4f8a0cab5",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/bitwise-verification.json"
+    },
+    "enflame_flaggems_operator_probe.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_operator_probe.json",
+      "sha256": "24a51cf9269f3f0b15b04c5853158bf08b5586a09780ba4f46de0d9899dc2968",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/flag_gems_operator_probe.json"
+    },
+    "enflame_flaggems_generic_probe.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_generic_probe.json",
+      "sha256": "6869afd76f11823a002b3803b7acecdae9ebdebde6421dcd7bf72e590b9874b3",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/generic_operator_probe.json"
+    },
+    "enflame_flaggems_square_probe.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_square_probe.json",
+      "sha256": "125883733802ef78b2eb6b064d9c0676743284891490887d8632c1e3e8a3a1af",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/vendor-mul-square-probe.json"
+    },
+    "enflame_flaggems_zero_launch_control.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_zero_launch_control.json",
+      "sha256": "0b4bace832d63236e4c000b5462f1b8bd414bd0bc17996df3e41849338650af1",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/zero-launch-control.json"
+    },
+    "enflame_flaggems_device_profile.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_device_profile.json",
+      "sha256": "129fcf34ad65f93d5622d4afe29e935a842838d11e39afcf95f48e17a2cb1e4c",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/native-device-summary.json"
+    },
+    "enflame_flaggems_vendor_device_profile.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_vendor_device_profile.json",
+      "sha256": "6be15fdb6af61424d21b64489dfe314a8587a5eed80e710d1475367ec0d3ed9a",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/vendor-device-summary.json"
+    },
+    "enflame_flaggems_full_forward_api.json": {
+      "path": "benchmarks/host_compiler/results/enflame_flaggems_full_forward_api.json",
+      "sha256": "5367cf07994f21dda53d5d21cd89911f9db8ed7feb1971c723c02fe1d88c0e7b",
+      "remote_path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/full-forward-api-summary.json"
+    }
+  },
+  "limitations": [
+    "Acceptance is for medians; tail samples exceed the 80% latency bound. Decode median headroom is only 0.485 ms on this run.",
+    "The generated experiment config is opt-in and limited to the documented published cohort/model shapes. Default Enflame coverage is unchanged apart from restoring independently qualified SiLU.",
+    "Other model sizes, long-context softmax grids, dtypes, training and Enflame architectures are not qualified by this experiment.",
+    "Vendor holds are isolated measured precision/compiler failures. No published dependency source, model layer count, math setting or acceptance tolerance was changed."
+  ],
+  "remote_run_directory": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118"
+}

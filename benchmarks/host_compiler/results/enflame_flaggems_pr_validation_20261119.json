@@ -1,0 +1,572 @@
+{
+  "date": "2026-11-19",
+  "scope": "Post-rebase adapter/correctness qualification. Stable 80% performance acceptance remains open; all initial and reverse-order samples are retained. Detailed device/API profiles remain historical November 18 diagnostics.",
+  "source_base": "f0b41362390a41e0d1d598379f658910eaf02ac1",
+  "source_sha256": {
+    "benchmarks/host_compiler/configs/enflame_native_host.conf": "8b999eb2b97b8052a64d8aa2f54d58ff7e6c34ec4ab432fc34ba3d1f99598d37",
+    "benchmarks/host_compiler/enflame_api_trace.cc": "e27d73dadada6994af643f0f1c76b84f2320c0cfa1182e9fef90b24ca05e550e",
+    "benchmarks/host_compiler/enflame_flaggems_probe.py": "052c61d9ff7d4068876d888a4b5fbb7cfd3c9ff9e47ad80e5a93fa61c5b2572e",
+    "benchmarks/host_compiler/enflame_profile_summary.py": "0423fe6f3bd984c932eb8472a925f348e903bbec25bb0fa285f2d803daee61c9",
+    "benchmarks/host_compiler/enflame_published_gems_probe.py": "7220ca7e65701a5a32e3c31f6740f7fe45d4ef27f70c5ed41c081becdb34f861",
+    "benchmarks/host_compiler/enflame_strided_add_probe.py": "b9066e25d5b22019f0fc9914559e48542f6b3947423cf41c513ebec68b026c97",
+    "benchmarks/host_compiler/qwen_eager.py": "8d394736b9c45c01c85f08b8641bdd901c63d7507a193d311249e42b4e841fb3",
+    "benchmarks/host_compiler/qwen_operator_census.py": "e3f719daad90e54abf4d2244a06beda64ff827b8d504219a67d9b15e1bb410ac",
+    "benchmarks/host_compiler/qwen_operator_snapshot.py": "75a257683ea28abf67b0b3648933c7856c848caa803e434e5a7ae70cb94403ac",
+    "benchmarks/host_compiler/qwen_strict_eager.py": "2ad984ee31db2fc07ce024ffdff8d4dea92803764b26b52d3ee7bd41f50028e2",
+    "csrc/aten/backends/enflame/gcu_copy.cc": "c923a0143999c26b7cff9ba47b19ca1e7e60a21213096a54bbc4ed307f3e259c",
+    "csrc/aten/backends/enflame/gcu_copy.h": "6318cc533493969fdcf0e7ffc427216e5e230291542a325735bd248497420c30",
+    "csrc/aten/backends/enflame/generated/gcu_flaggems_register.inc": "1cfd3ce0e984389fe5150011e8e0bc79974b1962f0d0549bce8bed08ccf55eeb",
+    "csrc/aten/backends/enflame/generated/gcu_kernels.cc": "adb4c523341b94b8eefa81c0144317bf5959d850324d76a6efddf042a3dbabb5",
+    "csrc/aten/backends/enflame/generated/gcu_register.inc": "839cef4b855125a00cab68263a365b86da0d557d79af700c57cc61637f8d82c3",
+    "csrc/aten/backends/enflame/topsaten_common.h": "5a4d706298f7565f8fe2e564152c26b171fe90cdcca55f976750c26c1a4fc94d",
+    "csrc/runtime/accelerator/enflame/interop.cc": "ab726c33b24b0322e47fc7932bc48e1a9f4899697db23573d10b6315a8665496",
+    "csrc/runtime/accelerator/enflame/interop.h": "c596d7cab31f887daf183b84e2f8b36741f417b9701a50e6f42d7c2bb5b4671a",
+    "csrc/runtime/accelerator/enflame/stream.cc": "913a45e31e4357e72d41cbe2f21f9adbd44e1392c8d90b01734e03e60883eaf6",
+    "scripts/codegen/codegen_gcu.py": "02cb2f24293af352113abe33da332d16ca15d90e3055f5e0b4ed64e79fe5956c",
+    "scripts/codegen/gen_vendor_confs.py": "615d64a4cef2675cd22e758b49a7a2c29311de5d2431fe8c0b88a9861c530920",
+    "tests/integration/flaggems/flaggems_caps.py": "beec21f00180f3978c8800719d0500480c729c8cf57b222e509b8663e4df495c",
+    "tests/integration/ops/conftest.py": "697351b4db3e964bb0d167bf4598d24627102d16fb8a722cf0d8116977ebb15f",
+    "tests/integration/ops/test_enflame_native_hosts.py": "1c982084cd3107c480ccafcf0a95796ee409748832f0d48e042325acc183314d",
+    "tests/unit/test_conf_registration_consistency.py": "75722b00e8cbb04095b19ef06d4f471132361cf755a85b1f3954961f8b3e686a",
+    "tests/unit/test_enflame_stream_interop.py": "0df51d1e722a71cc7c5704a682bad378df730d0008ebb0457f1eceb004b801b0",
+    "tests/unit/test_gen_vendor_confs.py": "6168fbc772c988781c45914c28204b63c590262f21569439e98d61c4ea1feb54",
+    "tests/unit/test_native_host_backend.py": "79dadf4f9680ca256607912a523925b53b861add73c89213c6c940084b2c277e",
+    "tests/unit/test_native_host_ir.py": "364844d6a582b5ca4d36e93856c05075f65c04478dcb167224e3833e8d217c62",
+    "tests/unit/test_native_host_source.py": "0f6ff890524b7696027931b18baf751ae4761dcc4c6694a79e2c1f1c537c6603",
+    "tests/unit/test_ops_conftest_platform.py": "af4dcf13025377469616fb91b910b9035fb09636db368a98976265649c736052",
+    "tests/unit/test_setup_build.py": "fb206d4ea2a2ab0fd81e455e346d21b89392f8ebf38324a3a5b1e03774cacd9d",
+    "torch_fl/configs/backends_enflame.conf": "36ef70d5122ed4c73b54add9c385c1bad09b1bfa9f2c824402d1cc71d78c4f11",
+    "torch_fl/native_host/backend.py": "f373e69a5065c025ec41280ac8065a0537a0affa18b7112f58f13680e1fa3e9f",
+    "torch_fl/native_host/backends/enflame.py": "fcebec021541d97917eb0e63e73b8dcf1b3f3730ef893f7fd9f6efe1c52397d6",
+    "torch_fl/native_host/build.py": "fe40ecea00d149683f22a77fc5a7dcd1dddcfe568690fba6092b18e931cb9d2c",
+    "torch_fl/native_host/compiler/frontend.py": "cfa478d67c154819b4e029b08ce59a0330991f41dc4a1d63b4a32ecc94807060",
+    "torch_fl/native_host/csrc/backends/enflame.cc": "6b2d0f494f1de5c4262a0c07b1802fe0ce885593e5752327301cdde6e9c88f53",
+    "torch_fl/native_host/csrc/launcher.cc": "e11c44cfab44bbad230d99d241e3efd85004144af42842bb0c81de8a524f9114",
+    "torch_fl/native_host/load.py": "5104c2d9189f592216fc5e0ba082d7e28ecdc8dcd76e054eb501fe8558e7dbf1",
+    "torch_fl/native_host/runtime.py": "313622008e8c90e9c13739b3e1e88084313b2536027170f91ac7103ca7bfec89"
+  },
+  "wheel_sha256": "3d17a6db179bb127fdb057de8054aa0adbe1ba3e474db4091dfb8595ac19e3d0",
+  "logits_validation": {
+    "atol": 0.001,
+    "rtol": 0.001,
+    "comparisons": 9,
+    "passed_comparisons": 9,
+    "failed_steps": [],
+    "violations": 0,
+    "passed": true
+  },
+  "generated_tokens": [
+    785,
+    12884,
+    7952,
+    6303,
+    1576,
+    315,
+    279,
+    1616
+  ],
+  "generated_text": "The sky appears blue because of the way",
+  "actual_flaggems_enqueues": 87032,
+  "actual_flaggems_kernel_names": 19,
+  "model_graph_capture_calls": 0,
+  "host_program_stats": [
+    0,
+    0,
+    0
+  ],
+  "verification": {
+    "unit-rebased.log": "695 passed, 162 warnings in 55.62s",
+    "hardware-experiment.log": "67 passed, 15 warnings in 28.28s",
+    "hardware-default.log": "67 passed, 15 warnings in 26.41s"
+  },
+  "preflight_exit_code": 0,
+  "source_hashes_match_remote": true,
+  "generator_artifacts_unchanged_after_two_runs": true,
+  "raw_reports": {
+    "vendor-rebased.json": {
+      "sha256": "4c95fd2dde2d89a7780f1128ee8b295e1fe9cb69c03c776050235bcd026ab5bb",
+      "path": "qwen3_enflame_vendor_pr_initial_20261119.json"
+    },
+    "native-rebased.json": {
+      "sha256": "dd232aec523fe79c2d9a036e150c416f83cbd1f4464e1a21924509d41f7e4bf9",
+      "path": "qwen3_enflame_flaggems_pr_initial_20261119.json"
+    },
+    "vendor-rebased-repeat.json": {
+      "sha256": "e8f78ae0d1426f5413bf7f91a2a544c3196fedae2f7daabfc2cdfa923ad07354",
+      "path": "qwen3_enflame_vendor_pr_repeat_20261119.json"
+    },
+    "native-rebased-repeat.json": {
+      "sha256": "67dd7b239705a94a984840b12044f16e641d4851312b8d3cf0001877830b5a4a",
+      "path": "qwen3_enflame_flaggems_pr_repeat_20261119.json"
+    }
+  },
+  "schema_version": 1,
+  "initial_metrics": {
+    "prefill": {
+      "vendor_median_ms": 50.87173730134964,
+      "native_median_ms": 73.27237352728844,
+      "relative_performance_percent": 69.42826450463456,
+      "passed_80_percent": false,
+      "target_native_max_ms": 63.58967162668705,
+      "native_median_headroom_ms": -9.682701900601387,
+      "vendor_observations": 7,
+      "native_observations": 7,
+      "native_p95_ms": 73.53754322975874
+    },
+    "decode": {
+      "vendor_median_ms": 44.46503333747387,
+      "native_median_ms": 66.35398790240288,
+      "relative_performance_percent": 67.01184773231039,
+      "passed_80_percent": false,
+      "target_native_max_ms": 55.58129167184234,
+      "native_median_headroom_ms": -10.772696230560541,
+      "vendor_observations": 56,
+      "native_observations": 56,
+      "native_p95_ms": 66.89456012099981
+    }
+  },
+  "initial_independent_bitwise_checks": [
+    {
+      "name": "full_prefill_logits",
+      "shape": [
+        1,
+        23,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "prompt_ids",
+      "shape": [
+        1,
+        23
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_0",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_1",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_2",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_3",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_4",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_5",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_6",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_7",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_8",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_0",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_1",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_2",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_3",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_4",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_5",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_6",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_7",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    }
+  ],
+  "repeat_independent_bitwise_checks": [
+    {
+      "name": "full_prefill_logits",
+      "shape": [
+        1,
+        23,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "prompt_ids",
+      "shape": [
+        1,
+        23
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_0",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_1",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_2",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_3",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_4",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_5",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_6",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_7",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "logits_8",
+      "shape": [
+        1,
+        151936
+      ],
+      "dtype": "torch.bfloat16",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_0",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_1",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_2",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_3",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_4",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_5",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_6",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    },
+    {
+      "name": "inputs_7",
+      "shape": [
+        1,
+        1
+      ],
+      "dtype": "torch.int64",
+      "bitwise_equal": true
+    }
+  ],
+  "repeat_logits_validation": {
+    "atol": 0.001,
+    "rtol": 0.001,
+    "comparisons": 9,
+    "passed_comparisons": 9,
+    "failed_steps": [],
+    "violations": 0,
+    "passed": true
+  },
+  "run_order": [
+    "vendor_initial",
+    "native_initial",
+    "native_repeat",
+    "vendor_repeat"
+  ],
+  "repeat_metrics": {
+    "prefill": {
+      "vendor_median_ms": 51.718179136514664,
+      "native_median_ms": 63.18802386522293,
+      "relative_performance_percent": 81.84807179098858,
+      "passed_80_percent": true,
+      "target_native_max_ms": 64.64772392064333,
+      "native_median_headroom_ms": 1.4597000554203987,
+      "vendor_observations": 7,
+      "native_observations": 7,
+      "native_p95_ms": 63.6988690122962
+    },
+    "decode": {
+      "vendor_median_ms": 45.209163799881935,
+      "native_median_ms": 56.93505145609379,
+      "relative_performance_percent": 79.40480010762013,
+      "passed_80_percent": false,
+      "target_native_max_ms": 56.51145474985242,
+      "native_median_headroom_ms": -0.42359670624136925,
+      "vendor_observations": 56,
+      "native_observations": 56,
+      "native_p95_ms": 57.23155476152897
+    }
+  },
+  "pooled_metrics": {
+    "prefill": {
+      "vendor_median_ms": 51.505482755601406,
+      "native_median_ms": 63.28923348337412,
+      "relative_performance_percent": 81.3811132175139,
+      "passed_80_percent": true,
+      "target_native_max_ms": 64.38185344450176,
+      "native_median_headroom_ms": 1.0926199611276388,
+      "vendor_observations": 14,
+      "native_observations": 14,
+      "native_p95_ms": 73.52594090625644
+    },
+    "decode": {
+      "vendor_median_ms": 44.84282433986664,
+      "native_median_ms": 57.04889073967934,
+      "relative_performance_percent": 78.60420028934412,
+      "passed_80_percent": false,
+      "target_native_max_ms": 56.0535304248333,
+      "native_median_headroom_ms": -0.9953603148460388,
+      "vendor_observations": 112,
+      "native_observations": 112,
+      "native_p95_ms": 66.76417728886008
+    }
+  },
+  "percentile_method": "linear inclusive empirical quantile (statistics.quantiles, n=100, method=inclusive)",
+  "acceptance": {
+    "adapter_build_and_preflight": true,
+    "hardware_default_and_experiment": true,
+    "complete_model_and_fixed_logits": true,
+    "independent_bitwise_checks": true,
+    "actual_flaggems_enqueues": true,
+    "stable_80_percent_performance": false
+  },
+  "repeat_actual_flaggems_enqueues": 87032,
+  "repeat_actual_flaggems_kernel_names": 19,
+  "repeat_model_graph_capture_calls": 0,
+  "cpu_cgroup": {
+    "cpu_max": "max 100000",
+    "samples": {
+      "cpu-stat-after-native-repeat.txt": "usage_usec 8490441795\nuser_usec 7557327522\nsystem_usec 933114273\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+      "cpu-stat-after-vendor-repeat.txt": "usage_usec 8505891068\nuser_usec 7570326065\nsystem_usec 935565003\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n",
+      "cpu-stat-before-repeat.txt": "usage_usec 8463215442\nuser_usec 7536533209\nsystem_usec 926682232\ncore_sched.force_idle_usec 0\nnr_periods 0\nnr_throttled 0\nthrottled_usec 0\nnr_bursts 0\nburst_usec 0\n"
+    },
+    "throttling_observed": false
+  },
+  "performance_investigation": {
+    "initial_decode_pattern_ms": "about 56 -> 66 -> 56 within one process",
+    "warm_python_call_counts_equal_historical": true,
+    "native_launch_source_sha256_unchanged": true,
+    "root_cause": "Unresolved; timing pattern establishes variability, not a proven host or device cause. CPU cgroup has no quota/throttling."
+  },
+  "macos_full_unit_baseline_comparison": "enflame_pr_macos_baseline_20261119.json",
+  "independent_published_wheel_probes": {
+    "source": "original torch_gcu and unmodified published FlagGems; no Torch-FL import",
+    "cases": "enflame_published_gems_direct_20261119.json",
+    "strided_add_sweep": "enflame_strided_add_direct_20261119.json"
+  }
+}

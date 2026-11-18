@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "timing_note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+  "device_profile": {
+    "artifact": {
+      "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/native-device.trace.json",
+      "sha256": "394e686deb05fdb7e69ed7d6237b95651f699fd304880646c962e8b00df2c210"
+    },
+    "scopes": {
+      "prefill": {
+        "profiled_wall_ms": 84.725019,
+        "kernel_count": 2174,
+        "kernel_sum_ms": 43.392998,
+        "copy_count": 7,
+        "copy_sum_ms": 0.14110999999999999,
+        "device_busy_union_ms": 43.53411962890625,
+        "host_or_device_idle_ms": 41.19089937109375,
+        "top_kernels": [
+          {
+            "name": "softmax_kernel_inner",
+            "calls": 28,
+            "duration_ms": 7.402039999999999
+          },
+          {
+            "name": "_Z35matmul_kernel_lhs_all_in_l1_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li32ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 197,
+            "duration_ms": 6.592691
+          },
+          {
+            "name": "mul_func_kernel_rank_4_stride_constexpr",
+            "calls": 224,
+            "duration_ms": 4.5744430000000005
+          },
+          {
+            "name": "mul_func_kernel_rank_1",
+            "calls": 141,
+            "duration_ms": 2.087967000000001
+          },
+          {
+            "name": "_Z9transposeILi3ELi2EL16TransposePattern3EEvPvS1_S1_15TransposeParams",
+            "calls": 168,
+            "duration_ms": 2.0795600000000007
+          },
+          {
+            "name": "bmm_kernel",
+            "calls": 56,
+            "duration_ms": 2.0253079999999994
+          },
+          {
+            "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+            "calls": 141,
+            "duration_ms": 1.9396829999999998
+          },
+          {
+            "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+            "calls": 143,
+            "duration_ms": 1.9163569999999999
+          },
+          {
+            "name": "mul_func_kernel_rank_3_stride_constexpr",
+            "calls": 115,
+            "duration_ms": 1.666301
+          },
+          {
+            "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.6341149999999998
+          },
+          {
+            "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.4705509999999997
+          },
+          {
+            "name": "add_func_tensor_scalar_kernel_rank_1",
+            "calls": 113,
+            "duration_ms": 1.1693770000000006
+          },
+          {
+            "name": "add_func_no_alpha_kernel_rank_4",
+            "calls": 56,
+            "duration_ms": 1.001224
+          },
+          {
+            "name": "neg_func_kernel_rank_4",
+            "calls": 56,
+            "duration_ms": 0.8637499999999999
+          },
+          {
+            "name": "_Z19slice_and_transposeILi3ELi2EEvPvS0_23SliceAndTransposeParams",
+            "calls": 56,
+            "duration_ms": 0.7868719999999999
+          },
+          {
+            "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+            "calls": 56,
+            "duration_ms": 0.720942
+          },
+          {
+            "name": "add_func_no_alpha_kernel_rank_1",
+            "calls": 56,
+            "duration_ms": 0.6973799999999998
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+            "calls": 56,
+            "duration_ms": 0.6833649999999999
+          },
+          {
+            "name": "add_func_no_alpha_kernel_rank_4_stride_constexpr",
+            "calls": 28,
+            "duration_ms": 0.5325880000000001
+          },
+          {
+            "name": "silu_forward_kernel_rank_1",
+            "calls": 28,
+            "duration_ms": 0.44676799999999994
+          }
+        ]
+      },
+      "decode": {
+        "profiled_wall_ms": 77.071405,
+        "kernel_count": 2016,
+        "kernel_sum_ms": 36.100097999999996,
+        "copy_count": 15,
+        "copy_sum_ms": 0.186101,
+        "device_busy_union_ms": 36.2861806640625,
+        "host_or_device_idle_ms": 40.7852243359375,
+        "top_kernels": [
+          {
+            "name": "mul_func_kernel_rank_3_stride_constexpr",
+            "calls": 115,
+            "duration_ms": 7.744225
+          },
+          {
+            "name": "_Z41matmul_kernel_lhs_all_in_l1_trans_split_nIN4tops13__ef_bfloat16ES1_S1_S1_S1_Li1ELb0ELb1ELb0EEvPT_PT0_PT1_S3_PT2_PT3_SB_S3_S7_14PRELU_OP_PARAS13GEMM_OP_PARAS",
+            "calls": 197,
+            "duration_ms": 5.888283999999998
+          },
+          {
+            "name": "mul_func_kernel_rank_4_stride_constexpr",
+            "calls": 224,
+            "duration_ms": 2.9693050000000034
+          },
+          {
+            "name": "_Z9to_kernelIfN4tops13__ef_bfloat16EEvPT_PT0_11TO_OP_PARAS",
+            "calls": 141,
+            "duration_ms": 1.873251
+          },
+          {
+            "name": "_Z9to_kernelIN4tops13__ef_bfloat16EfEvPT_PT0_11TO_OP_PARAS",
+            "calls": 143,
+            "duration_ms": 1.7899159999999998
+          },
+          {
+            "name": "bmm_kernel",
+            "calls": 56,
+            "duration_ms": 1.6907170000000005
+          },
+          {
+            "name": "mul_func_kernel_rank_1",
+            "calls": 141,
+            "duration_ms": 1.5598889999999987
+          },
+          {
+            "name": "_Z18concatenate_kernelILi2EL18ConcatenatePattern0ELm2EJPvS1_EEvS1_17ConcatenateParamsIXT1_EEDpT2_",
+            "calls": 112,
+            "duration_ms": 1.5443189999999996
+          },
+          {
+            "name": "_Z11mean_kernelIfEvPT_S1_13MEAN_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.4410519999999998
+          },
+          {
+            "name": "_Z12unary_kernelIffN9cc_kernel5RSQRTEEvPT_PT0_14UNARY_OP_PARAS",
+            "calls": 113,
+            "duration_ms": 1.3643490000000005
+          },
+          {
+            "name": "add_func_no_alpha_kernel_rank_1",
+            "calls": 112,
+            "duration_ms": 1.2326009999999996
+          },
+          {
+            "name": "add_func_tensor_scalar_kernel_rank_1",
+            "calls": 113,
+            "duration_ms": 1.1944049999999997
+          },
+          {
+            "name": "neg_func_kernel_rank_4_stride_constexpr",
+            "calls": 56,
+            "duration_ms": 0.7742610000000001
+          },
+          {
+            "name": "_Z30broadcast_single_thread_kernelILi3ELi2EEvPvS0_15BroadcastParams",
+            "calls": 56,
+            "duration_ms": 0.6833919999999999
+          },
+          {
+            "name": "_Z12slice_kernelILi2ELi2ELi4EEvPvS0_11SliceParams",
+            "calls": 56,
+            "duration_ms": 0.6825950000000001
+          },
+          {
+            "name": "softmax_kernel_inner",
+            "calls": 28,
+            "duration_ms": 0.6473949999999998
+          },
+          {
+            "name": "_Z9transposeILi3ELi2EL16TransposePattern2EEvPvS1_S1_15TransposeParams",
+            "calls": 28,
+            "duration_ms": 0.445448
+          },
+          {
+            "name": "_Z20binary_tensor_kernelIN9cc_kernel2LTEhLb0ELb0ELb1ELb0EEvT_PhS3_PT0_15BINARY_OP_PARAS",
+            "calls": 27,
+            "duration_ms": 0.335052
+          },
+          {
+            "name": "mul_func_scalar_kernel_rank_1",
+            "calls": 30,
+            "duration_ms": 0.319903
+          },
+          {
+            "name": "add_func_no_alpha_kernel_rank_4_stride_constexpr",
+            "calls": 28,
+            "duration_ms": 0.31332
+          }
+        ]
+      }
+    }
+  }
+}

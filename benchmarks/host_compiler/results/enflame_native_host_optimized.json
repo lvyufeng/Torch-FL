@@ -1,0 +1,537 @@
+{
+  "schema_version": 2,
+  "date": "2026-11-17",
+  "timezone": "Asia/Shanghai",
+  "source": {
+    "base_revision": "eba6b82e95b4ae3cc7f1784c54fd8724596f3845",
+    "candidate": "Uncommitted working-tree implementation; implementation and benchmark source hashes match the remote build tree. Generated artifacts match the compiled wheel inputs after a repeated generator run.",
+    "source_sha256_verified_against_remote": {
+      "benchmarks/host_compiler/enflame_api_trace.cc": "18fb122082daeb847d9e935afdc97e7fe32041f58aa6aa92fcbd1f7fe72ef123",
+      "benchmarks/host_compiler/enflame_profile_summary.py": "0423fe6f3bd984c932eb8472a925f348e903bbec25bb0fa285f2d803daee61c9",
+      "benchmarks/host_compiler/qwen_eager.py": "fd93e3625d6cd3c9c983723b1bcc5e47d03a1ae71359a2dc7b6fc24fbcc27f00",
+      "benchmarks/host_compiler/qwen_operator_snapshot.py": "75a257683ea28abf67b0b3648933c7856c848caa803e434e5a7ae70cb94403ac",
+      "benchmarks/host_compiler/qwen_strict_eager.py": "2ad984ee31db2fc07ce024ffdff8d4dea92803764b26b52d3ee7bd41f50028e2",
+      "csrc/aten/backends/enflame/gcu_copy.cc": "54a1d8d1bb6a5b4c8dceb572730574f00cf2f15e227cd9789de93be7e47ef9db",
+      "csrc/aten/backends/enflame/gcu_copy.h": "6318cc533493969fdcf0e7ffc427216e5e230291542a325735bd248497420c30",
+      "csrc/aten/backends/enflame/generated/gcu_flaggems_register.inc": "32b1577a8383542dd6048962c63d795c4d9ba3a917ea51c27b7e4cde04cb009d",
+      "csrc/aten/backends/enflame/generated/gcu_kernels.cc": "d1c5d04056c7a1c93f211f1fd6b86d23d9a8d95bcaa0f89d0ca82381936fc236",
+      "csrc/aten/backends/enflame/generated/gcu_register.inc": "839cef4b855125a00cab68263a365b86da0d557d79af700c57cc61637f8d82c3",
+      "csrc/aten/backends/enflame/topsaten_common.h": "bd4dfbfa5d2f01a743637b9a5b96e958dbe96ae49fcc5309b3d59182a3ae409d",
+      "csrc/runtime/accelerator/enflame/interop.cc": "e53182cede3d7c5eb31097ce1cd5e950093e2f254c10320a65d19b0dc581d296",
+      "csrc/runtime/accelerator/enflame/interop.h": "484e2aea2c8ad1cfc750f0effa4eb1ba5f3ea5ca1761075ed90e708d91769810",
+      "csrc/runtime/accelerator/enflame/stream.cc": "913a45e31e4357e72d41cbe2f21f9adbd44e1392c8d90b01734e03e60883eaf6",
+      "scripts/codegen/codegen_gcu.py": "210636b3ef27c05350137027e1ccfc6768882abbe8fb9b2ba4e7ee59156eb5bc",
+      "scripts/codegen/gen_vendor_confs.py": "ab577d82fd66d6792549065a426933fae0604acbe3699edad6e6c2a703a1a62d",
+      "tests/integration/ops/test_enflame_native_hosts.py": "5dbcd5cf54e55966c06857d10c69ad6ed2473cb3d7d34894a21fde8af6a931c2",
+      "torch_fl/native_host/backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+      "torch_fl/native_host/backends/enflame.py": "e7a514dfaafef778ec19f88ed89b339a5f7a800369ab1f1bf2eb78820e7dfe66",
+      "torch_fl/native_host/build.py": "2c8a817a193f9b744afc307f28b8d534034b9603aeb8dab78d7a246754958840",
+      "torch_fl/native_host/compiler/frontend.py": "b6934ef6667fde4a1c8eab76aa373c125215660920457ea6d758bc1325e181e9",
+      "torch_fl/native_host/csrc/backends/enflame.cc": "6b2d0f494f1de5c4262a0c07b1802fe0ce885593e5752327301cdde6e9c88f53",
+      "torch_fl/native_host/load.py": "9eaa1f5c8ac5419f2465ab7fd02848f62b10c4d935e0754a26ca705f41b567ab",
+      "torch_fl/native_host/runtime.py": "072c771ea28607d2abdacd154541ee5d4c0ef5889e6042c1e261aa4c8b196d60"
+    }
+  },
+  "supersedes": "enflame_native_host_validation.json (historical pre-optimization failure)",
+  "acceptance": {
+    "adapter_build": "passed",
+    "wheel_preflight": "passed",
+    "hardware_conformance": "63 passed, no skips",
+    "full_model_completed": true,
+    "vendor_exit_code": 0,
+    "native_exit_code": 0,
+    "performance_80_percent_passed": true,
+    "vendor_logits_passed": true,
+    "observed_model_cpu_tensor_fallbacks_removed": true,
+    "accepted_for_measured_workload_and_cohort": true
+  },
+  "performance": {
+    "prefill": {
+      "vendor_complete_ms": 51.6127347946167,
+      "native_complete_ms": 42.47145168483257,
+      "vendor_submit_ms": 50.95364712178707,
+      "native_submit_ms": 41.798459365963936,
+      "relative_performance": 1.2152335921460549,
+      "latency_ratio": 0.8228870617656637,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 64.51591849327087,
+      "passed": true,
+      "measured_observations": 7
+    },
+    "decode": {
+      "vendor_complete_ms": 45.19186541438103,
+      "native_complete_ms": 38.12721464782953,
+      "vendor_submit_ms": 44.50440127402544,
+      "native_submit_ms": 37.46493998914957,
+      "relative_performance": 1.185291551764421,
+      "latency_ratio": 0.8436742829318267,
+      "required_relative_performance": 0.8,
+      "maximum_native_latency_ms": 56.489831767976284,
+      "passed": true,
+      "measured_observations": 56
+    }
+  },
+  "accuracy": {
+    "scope": {
+      "prefill": "all_positions",
+      "decode": "every_requested_step"
+    },
+    "validation": {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "comparisons": 9,
+      "passed_comparisons": 9,
+      "failed_steps": [],
+      "violations": 0,
+      "passed": true
+    },
+    "maximum_absolute_error": 0.0,
+    "all_compared_values_bitwise_equal": true,
+    "independent_byte_verification": "CPU torch.load of vendor-paired-final.pt and native-paired-final.pt followed by equality of contiguous uint8 views: full prefill logits, all nine last-token arrays, all eight decode inputs and prompt ids match bitwise.",
+    "vendor_generated_tokens": [
+      785,
+      12884,
+      7952,
+      6303,
+      1576,
+      315,
+      279,
+      1616
+    ],
+    "native_generated_tokens": [
+      785,
+      12884,
+      7952,
+      6303,
+      1576,
+      315,
+      279,
+      1616
+    ],
+    "vendor_generated_text": "The sky appears blue because of the way",
+    "native_generated_text": "The sky appears blue because of the way",
+    "precision_contract_equal": true,
+    "math_settings_unchanged": true
+  },
+  "root_causes_and_changes": [
+    {
+      "cause": "Every topsaten and native-copy call drained the stream before and after submission, even between calls from the same producer.",
+      "change": "The native launcher enables ABI-checked producer tracking after a device drain. A shared submission lock and per-stream producer record preserve barriers on topsaten/Triton transitions. Ordinary builds keep legacy barriers.",
+      "evidence": "Two profiled forwards before optimization: 7176 topsStreamSynchronize calls, 173.402153 ms aggregate API duration. The final separate forwarding API observer records 22 calls. Timings from different instrumentation methods are not directly comparable."
+    },
+    {
+      "cause": "Weak floating scalars were first rounded to BF16 before mul.Tensor, changing attention scores. FP32 add also staged every weak scalar through a blocking host-to-device copy.",
+      "change": "Generated floating Mul uses the measured SDK scalar overload with FP32 opmath. FP32 Add uses its measured scalar overload; Half/BF16 Add retains staging because its scalar SDK rounding is not uniformly equivalent.",
+      "evidence": "The first large first-attention difference is the BF16 score scale: 0.08838834764831845 became 0.08837890625, with maximum score error 0.25. Final API observation has no 4-byte host-to-device scalar-add uploads."
+    },
+    {
+      "cause": "The published mean.dim reduction and SiLU routes together fail full vendor-logit acceptance even after the scalar multiply correction.",
+      "change": "The generated default conf selects the vendor mean.dim and SiLU implementations for this published cohort. Revisit when a published cohort passes the same full-model precision contract."
+    },
+    {
+      "cause": "Int64 position/cache factories, arithmetic, comparisons, casts, embedding-index preparation and token argmax had unsupported device routes or hidden tensor CPU computation.",
+      "change": "Platform codegen composes measured vendor int32 operations over int64 storage words, supplies bounded int64 arange and device argmax, and validates embedding bounds on device. Copy infrastructure preserves int64 words and handles measured int32-range casts. Host exception checks export scalar bools only."
+    }
+  ],
+  "cpu_fallback_audit": {
+    "scope": "Two additional synchronized full-model forwards (prefill and one cached decode) after validating all nine vendor-logit comparisons. Source inspection, forwarding API call stacks and independent TOPSPTI memory events cover the observed tensor paths.",
+    "api_observer": "enflame_api_trace.cc forwards every SDK call unchanged; no waits are skipped and no kernels are substituted. It is used only in a diagnostic process.",
+    "readbacks": {
+      "device_to_host_scalar_bool_calls": 4,
+      "bytes_per_call": 1,
+      "purposes": [
+        "embedding index bounds",
+        "int64-to-int32 conversion range"
+      ]
+    },
+    "constant_uploads": {
+      "host_to_device_scalar_calls": 2,
+      "bytes_per_call": 2
+    },
+    "device_trace_memcpy_counts": [
+      {
+        "topspti_copy_kind": 8,
+        "direction": "device_to_device",
+        "bytes": 47104,
+        "calls": 28
+      },
+      {
+        "topspti_copy_kind": 8,
+        "direction": "device_to_device",
+        "bytes": 4,
+        "calls": 16
+      },
+      {
+        "topspti_copy_kind": 2,
+        "direction": "device_to_host",
+        "bytes": 1,
+        "calls": 4
+      },
+      {
+        "topspti_copy_kind": 1,
+        "direction": "host_to_device",
+        "bytes": 2,
+        "calls": 2
+      }
+    ],
+    "tensor_readbacks": [],
+    "observed_model_tensor_cpu_fallbacks": 0,
+    "scope_limit": "This is a model-path result, not platform-wide operator coverage. Unmeasured/unsupported operators and int64 ranges still retain existing fallbacks; for example, the native int64-to-float bridge is limited to values that fit int32 and never silently truncates a wider value."
+  },
+  "profiling": {
+    "diagnostic_only": true,
+    "method": "TOPSPTI device activity via the native Torch profiler and the vendor torch_gcu.gcu.profiler respectively, in profiling-capable privileged execs. Compute SDK and dependencies are unchanged. Acceptance processes run without profiler, LD_PRELOAD or extra privileges.",
+    "note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+    "native": {
+      "prefill": {
+        "profiled_wall_ms": 74.558246,
+        "kernel_count": 2519,
+        "kernel_sum_ms": 38.541016000000006,
+        "copy_count": 35,
+        "copy_sum_ms": 0.323454,
+        "device_busy_union_ms": 38.864474609375,
+        "host_or_device_idle_ms": 35.693771390625
+      },
+      "decode": {
+        "profiled_wall_ms": 68.523455,
+        "kernel_count": 2357,
+        "kernel_sum_ms": 34.302246,
+        "copy_count": 15,
+        "copy_sum_ms": 0.19566,
+        "device_busy_union_ms": 34.49790087890625,
+        "host_or_device_idle_ms": 34.025554121093755
+      }
+    },
+    "vendor": {
+      "prefill": {
+        "profiled_wall_ms": 102.90452499999999,
+        "kernel_count": 2188,
+        "kernel_sum_ms": 35.994870000000006,
+        "copy_count": 1,
+        "copy_sum_ms": 0.055019,
+        "device_busy_union_ms": 36.0498779296875,
+        "host_or_device_idle_ms": 66.8546470703125
+      },
+      "decode": {
+        "profiled_wall_ms": 100.067361,
+        "kernel_count": 1936,
+        "kernel_sum_ms": 30.795295999999997,
+        "copy_count": 1,
+        "copy_sum_ms": 0.08308499999999999,
+        "device_busy_union_ms": 30.8783779296875,
+        "host_or_device_idle_ms": 69.1889830703125
+      }
+    },
+    "native_api_times": [
+      {
+        "api": "topsGetDevice",
+        "calls": 72472,
+        "cpu_ms": 19.408926999994076
+      },
+      {
+        "api": "topsLaunchKernel",
+        "calls": 4876,
+        "cpu_ms": 41.54376800000007
+      },
+      {
+        "api": "topsStreamSynchronize",
+        "calls": 22,
+        "cpu_ms": 0.51481
+      },
+      {
+        "api": "topsMemcpy",
+        "calls": 22,
+        "cpu_ms": 1.407176
+      },
+      {
+        "api": "topsSetDevice",
+        "calls": 376,
+        "cpu_ms": 0.1704930000000001
+      },
+      {
+        "api": "topsDeviceSynchronize",
+        "calls": 2,
+        "cpu_ms": 1.304621
+      }
+    ],
+    "interpretation": "Native kernels remain slightly slower in aggregate and more numerous than vendor kernels. Removing repeated synchronization and weak-scalar transfers improves whole-forward latency. Profiled idle time includes instrumentation, host submission, waits and other device gaps; it is not a direct measurement of pure Python CPU time.",
+    "before_cpu_trace": {
+      "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/results/native-before.trace.json",
+      "stream_sync_calls": 7176,
+      "stream_sync_aggregate_ms": 173.402153,
+      "memcpy_calls": 324
+    },
+    "capability_note": "Ordinary container capabilities returned unusable device timestamps. Profiling-capable execs yielded real nonzero kernel durations. The host topsprof 1.9.10 CLI could not import this SDK 1.7 capture; no CLI-derived duration is used."
+  },
+  "workload": {
+    "model": "Qwen3-0.6B",
+    "layers": 28,
+    "parameters": 596049920,
+    "prompt": "Explain in one sentence why the sky is blue.",
+    "prompt_tokens": 23,
+    "decode_steps": 8,
+    "rounds": 7,
+    "unmeasured_timing_repetitions": 1,
+    "dtype": "bfloat16",
+    "contract": {
+      "version": 1,
+      "checkpoint_sha256": {
+        "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+      },
+      "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+      "dtype": "bfloat16",
+      "attention": "eager",
+      "math_settings": {
+        "float32_matmul_precision": "highest",
+        "allow_tf32": false,
+        "allow_bf16_reduced_precision_reduction": true,
+        "allow_fp16_reduced_precision_reduction": true,
+        "environment": {
+          "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+          "NVIDIA_TF32_OVERRIDE": null,
+          "CUBLAS_WORKSPACE_CONFIG": null
+        }
+      }
+    },
+    "cpu_affinity": [
+      64,
+      65,
+      66,
+      67,
+      68,
+      69,
+      70,
+      71
+    ],
+    "torch_threads": 1,
+    "token_selection_device": "device",
+    "timed_scope": "Synchronized ordinary eager model forwards; device token selection is outside forward timing. No profiler or LD_PRELOAD observer is present in acceptance runs.",
+    "inputs": "The candidate reuses the paired vendor reference, including prompt ids and all eight decode inputs.",
+    "capture_calls": {
+      "vendor": 0,
+      "native": 0
+    },
+    "native_host_program_stats": [
+      0,
+      0,
+      0
+    ]
+  },
+  "hardware": {
+    "asset_label": "S60",
+    "reported_device_name": "ZIXIAOC200",
+    "physical_device": 0,
+    "driver_version": "1.10.6",
+    "visibility": {
+      "TOPS_VISIBLE_DEVICES": "0"
+    },
+    "pmon_before_and_after": "no process running",
+    "execution": "Sequential acceptance and diagnostic GPU processes after compilation. Occupancy checks are snapshots, not a reservation.",
+    "os": "Ubuntu 22.04.5 LTS",
+    "container": "lvyufeng-torch-fl",
+    "container_image": "registry-egc.enflame-tech.com/artifacts/torch_gcu:v2.10.0-TR3.7.107-ubuntu2204",
+    "container_image_id": "sha256:52aac4da7de1a60a28d856e9ff513a0c186777c4539ad063f8fb86e7ac42a066",
+    "sdk_packages": {
+      "topsruntime": "1.7.2.2402",
+      "topscc": "1.7.2.2402",
+      "topsaten": "3.6.20260403"
+    },
+    "tops_runtime_library": "/opt/tops/lib/libtopsrt.so.1.7",
+    "scope": "Existing container; not the pinned current CI image. Hardware conformance covers GCU300, not all source-supported launch architectures.",
+    "historical_memory_mib_snapshot": {
+      "total": 42976,
+      "reserved": 1129.94921875,
+      "used": 0,
+      "free": 41846.05078125
+    },
+    "current_occupancy_checks": "EFSMI pmon before each paired acceptance process and after final diagnostics: no device process running. Detailed memory values above are from the historical verified snapshot."
+  },
+  "environment": {
+    "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+    "torch": "2.10.0+cpu",
+    "torch_cuda": null,
+    "torch_cxx11_abi": true,
+    "transformers": "5.19.0",
+    "flag_gems": "5.4.0",
+    "flagtree": "0.7.0+enflame3.6",
+    "triton": "3.6.0",
+    "flagcx": "0.14.0+tops1.9.10",
+    "cython_build_only": "3.2.4",
+    "vendor_torch_gcu": "2.10.0+3.7.20260408",
+    "dependencies": "Published wheels; no FlagGems/FlagTree/FlagCX source builds. Both provider environments share CPU-Torch and Hugging Face dependencies. Vendor process imports neither torch_fl nor flag_gems.",
+    "runtime_environment": {
+      "TORCH_DEVICE_BACKEND_AUTOLOAD": "0",
+      "PYTHONNOUSERSITE": "1",
+      "OMP_NUM_THREADS": "1",
+      "MKL_NUM_THREADS": "1",
+      "OPENBLAS_NUM_THREADS": "1",
+      "TOKENIZERS_PARALLELISM": "false",
+      "HF_HUB_OFFLINE": "1",
+      "TRANSFORMERS_OFFLINE": "1"
+    }
+  },
+  "artifact": {
+    "filename": "torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl",
+    "sha256": "ec842db83479dc09eced9a495d6d9a2cbe165a8e706ca7fa1a26d298ec9fa306",
+    "sdk_version_verified": "1.7.2.2402",
+    "kernels": [
+      "flaggems",
+      "vendor"
+    ],
+    "published": false,
+    "filename_note": "tops1.9.10 is the existing platform-table build variant, not the installed SDK version. The generated compatibility manifest records verified SDK 1.7.2.2402."
+  },
+  "host_boundary": {
+    "backend": {
+      "schema_version": 1,
+      "abi_version": 1,
+      "vendor": "enflame",
+      "compiler_backend": "gcu",
+      "capabilities": 177,
+      "scratch_alignment": 256,
+      "slot_bytes": 128,
+      "slot_alignment": 128,
+      "native_source_sha256": "053b33ab8f6cc4ca2086e2b7bb766bf1b9b642e540688444068ae3a4f54b4a79",
+      "compiler_distribution": {
+        "name": "flagtree",
+        "version": "0.7.0+enflame3.6"
+      },
+      "utility_modules": [
+        "gcu_utils"
+      ],
+      "driver_sources": {
+        "backends/enflame/backend.py": "f3fb7ba077c9070598cc5da565741c7e8d6cac66f4ecac4f12f28fbdb93151b4",
+        "backends/enflame/driver.py": "023f2668b139e0d4ed71855c6a69a9b2c520129f2c8a052cb92b8c0290b2fdb0",
+        "backends/enflame/utils/gcu.cpp": "1449b98b34f2f0d40891bb69c33c9e956427664730dc9a9cf60aa3c07ab60e82",
+        "backends/enflame/compiler.py": "d295cd88485a1291922b234abd996ba065f732c527c89bcd9dfd1c887f11ab3c",
+        "backends/enflame/VERSION": "7489df2e853756006b398564f8ad88c2726de658dad26d64883ed2f03a3be642"
+      },
+      "adapter_sources": {
+        "backend.py": "eb9613a0ed05f6f2da10480c3980e2e779ba33fbb58785f27bdc055463376114",
+        "backends/enflame.py": "e7a514dfaafef778ec19f88ed89b339a5f7a800369ab1f1bf2eb78820e7dfe66"
+      },
+      "native_sources": {
+        "csrc/launcher.cc": "357b1d3b7706f35b40230a89363e7c2e4913ab49bc035fcdbb3c3d00154b92c8",
+        "csrc/backend_api.h": "718684df8768c47b192e2d516c9679f26f30b6fd55abeb4a65ee1e89c7e501c3",
+        "csrc/host_abi.h": "ce8daf1c3b9e683b3d28b0536d2671cc42207bc1e111e6229b4ab3e837ea391a",
+        "csrc/backends/enflame.cc": "6b2d0f494f1de5c4262a0c07b1802fe0ce885593e5752327301cdde6e9c88f53"
+      }
+    },
+    "host_artifacts": 797,
+    "typed_variants": 684,
+    "typed_fallbacks": 990,
+    "typed_entry_stats": [
+      276,
+      59432
+    ],
+    "native_source_stats": [
+      395,
+      0
+    ],
+    "model_launched_triton_kernels": {},
+    "interpretation": "After the precision-driven mean.dim/SiLU route changes, this model launches vendor numerical kernels. Typed-entry hits include compiled ATen/composite hosts and are not a FlagGems numerical-coverage count. Real FlagGems TOPS launch behavior is covered separately by the hardware conformance suite."
+  },
+  "verification": {
+    "ruff_check": {
+      "command": "ruff check",
+      "output": "All checks passed!",
+      "exit_code": 0
+    },
+    "ruff_format": {
+      "command": "ruff format --check",
+      "output": "629 files already formatted",
+      "exit_code": 0
+    },
+    "local_units": {
+      "command": "python -m pytest tests/unit/test_native_host_*.py tests/unit/test_native_scalar_bindings.py tests/unit/test_native_source_bridges.py tests/unit/test_setup_build.py tests/unit/test_wheel_preflight.py tests/unit/test_ops_conftest_platform.py tests/unit/test_logits_validation.py tests/unit/test_enflame_stream_interop.py -q -rs --disable-warnings",
+      "output": "303 passed, 4 skipped, 54 warnings in 2.74s",
+      "skip_reasons": [
+        "Three modules require Torch/torchgen absent on the macOS host.",
+        "One MetaX setup case requires GNU ld."
+      ]
+    },
+    "codegen_and_route_units": {
+      "command": "python -m pytest tests/unit/test_gen_vendor_confs.py tests/unit/test_conf_registration_consistency.py tests/unit/test_conf_matches_codegen_routes.py tests/unit/test_enflame_stream_interop.py -q --disable-warnings",
+      "output": "165 passed, 21 warnings in 4.17s"
+    },
+    "linux_torch_units": {
+      "command": "python -m pytest tests/unit/test_native_host_ir.py tests/unit/test_native_source_bridges.py tests/unit/test_logits_validation.py -q --disable-warnings",
+      "output": "88 passed, 39 warnings in 30.13s"
+    },
+    "hardware": {
+      "command": "python -m pytest tests/integration/ops/test_enflame_native_hosts.py -q --disable-warnings",
+      "output": "63 passed in 5.69s",
+      "scope": "Installed wheel imported outside the source checkout. Includes live TOPS launches and 40 mixed-producer iterations; 12 cases compare launch schedules rather than numerical dtype coverage."
+    },
+    "preflight": {
+      "command": "python scripts/tools/torch-fl-preflight --wheel dist/torch_fl-2.10.0+tops1.9.10-cp312-cp312-linux_x86_64.whl --check-build-env --check-native-host-backend --sdk-version 1.7.2.2402",
+      "exit_code": 0,
+      "build": {
+        "distributions": {
+          "flag_gems": "5.4.0",
+          "flagcx": "0.14.0+tops1.9.10",
+          "flagtree": "0.7.0+enflame3.6",
+          "torch": "2.10.0+cpu"
+        },
+        "sdk_version": "1.7.2.2402",
+        "torch_cxx11_abi": true,
+        "kernels": [
+          "flaggems",
+          "vendor"
+        ],
+        "vendor_torch_libraries": false
+      }
+    },
+    "generator_idempotency": "Second generator run: empty diff (all four artifact hashes unchanged).",
+    "interval_union_checks": "Passed empty, nested, overlapping and adjacent interval examples.",
+    "raw_report_hashes_match_remote": true
+  },
+  "reproduction": {
+    "remote_root": "/public-flash/lvyufeng/codex-enflame-native-20261117",
+    "vendor_command": "taskset -c 64-71 <root>/vendor-matched/bin/python -u <root>/src/benchmarks/host_compiler/qwen_strict_eager.py --model <root>/model --device gcu:0 --dtype bfloat16 --steps 8 --rounds 7 --progress-every 1 --output <root>/results/vendor-paired-final.json",
+    "native_command": "taskset -c 64-71 <root>/venv/bin/python -u <root>/src/benchmarks/host_compiler/qwen_strict_eager.py --model <root>/model --device flagos:0 --dtype bfloat16 --steps 8 --rounds 7 --progress-every 1 --reference <root>/results/vendor-paired-final.pt --check-logits --output <root>/results/native-paired-final.json",
+    "logs": [
+      "build-perf-3.log",
+      "preflight-perf-3.log",
+      "install-perf-3.log",
+      "conformance-perf-3.log",
+      "vendor-paired-final.log",
+      "native-paired-final.log",
+      "native-final-diagnostics.log",
+      "native-final-pti.log",
+      "vendor-final-pti.log",
+      "torch-unit-perf3-source.log",
+      "codegen-final-check.log"
+    ]
+  },
+  "raw_reports": {
+    "vendor": {
+      "file": "qwen3_vendor_enflame_optimized.json",
+      "sha256": "3ebdb85b1176efdd8c9189a2b061f6edc95999e20a5930ef69574d3bda901283"
+    },
+    "native": {
+      "file": "qwen3_eager_source_hosts_enflame_optimized.json",
+      "sha256": "9d58cb703f2fe7f3fc49ebcf9b4921d12373a33e27f0ee399d1b6f7ee72f1e95"
+    },
+    "native_profile": {
+      "file": "enflame_native_host_profile.json",
+      "sha256": "7a996c980e3cf4ebaa27b52f1e57e07206f41f4fdad2cd7dd9c48a74a1851f8c"
+    },
+    "vendor_profile": {
+      "file": "enflame_vendor_profile.json",
+      "sha256": "efbd67911d9751c22717b3a306afc6c96a3fb0179e89d6c17879b3f1c0bf7c3e"
+    },
+    "attention_precision": {
+      "file": "enflame_attention_precision_diagnostic.json",
+      "sha256": "2e145d25f91e9a766ab75af3948ae9af4a198c8c8a811b623613e16d59b4cbed"
+    }
+  },
+  "limitations": [
+    "Qualified only for full Qwen3-0.6B, BF16, batch one, the measured 23-token prompt, eight cached decode steps and this S60/GCU300 cohort. No other model, SDK, architecture, training or multi-device result is implied.",
+    "Forward latencies exclude token selection, checkpoint loading and startup; they do not qualify end-to-end generation throughput. Earlier validation populated caches.",
+    "The current full-model numerical path uses vendor kernels; FlagGems launch-adapter conformance is a separate result.",
+    "No observed model tensor CPU fallback remains; scalar bool range checks still synchronize with the host. Other operators and wider int64 ranges are not qualified by this audit.",
+    "Device profiles and API observation are separate instrumented runs. Profile idle time must not be subtracted from unprofiled medians as pure host overhead.",
+    "Vendor pointwise hosts use compiled Cython object semantics rather than the shared typed C++ pointwise schedule."
+  ]
+}

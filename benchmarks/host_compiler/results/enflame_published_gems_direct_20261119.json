@@ -1,0 +1,1124 @@
+{
+  "scope": "Compare unmodified published FlagGems against original torch_gcu, without Torch-FL.",
+  "torch_fl_imported": false,
+  "versions": {
+    "torch": "2.10.0+cpu",
+    "torch-gcu": "2.10.0+3.7.20260408",
+    "flag_gems": "5.4.0",
+    "flagtree": "0.7.0+enflame3.6"
+  },
+  "sources": {
+    "add": {
+      "module": "gcu300.ops.add",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/add.py",
+      "sha256": "709aee25367569ed1c520dd3ecfda596d265a9968683a8553ac8d63b9953ff6f"
+    },
+    "cat": {
+      "module": "gcu300.ops.cat",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/cat.py",
+      "sha256": "28689acb0e0e37bad15b30a442c2685aa607c60c91255ab1736a0995b1008224"
+    },
+    "mean_dim": {
+      "module": "gcu300.ops.mean",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mean.py",
+      "sha256": "a946edf3b424087cd309a09c381c6f3526dd2982c332cd833142256eeb49a787"
+    },
+    "rsqrt": {
+      "module": "gcu300.ops.rsqrt",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/rsqrt.py",
+      "sha256": "69b88a3e444c03f4758b292347fb5ddec250f5579139c5f252a5149e0a8d5b72"
+    },
+    "pow_tensor_scalar": {
+      "module": "gcu300.ops.pow",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/pow.py",
+      "sha256": "3dc6a255c925e8e5ebbb46fe05a1d440674f420fbcc74225f6a8d2b110876fa2"
+    },
+    "mm": {
+      "module": "gcu300.ops.mm",
+      "path": "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mm.py",
+      "sha256": "90ba744b7006d8078b726a97d07f01ce6d72c836551b439362dae68ea639724b"
+    }
+  },
+  "cases": {
+    "int32_add_low_words_broadcast": {
+      "against_vendor": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": false,
+        "different_values": 63,
+        "max_abs_error": 4294967295.0,
+        "violations_atol_rtol_1e_3": 59,
+        "examples": [
+          {
+            "index": [
+              0,
+              1
+            ],
+            "actual": 2147483647,
+            "expected": -2
+          },
+          {
+            "index": [
+              0,
+              2
+            ],
+            "actual": -2,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              3
+            ],
+            "actual": -10,
+            "expected": -2
+          },
+          {
+            "index": [
+              0,
+              4
+            ],
+            "actual": 2147483647,
+            "expected": -1
+          },
+          {
+            "index": [
+              0,
+              5
+            ],
+            "actual": -2,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              7
+            ],
+            "actual": -2,
+            "expected": -1
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": false,
+        "different_values": 63,
+        "max_abs_error": 4294967295.0,
+        "violations_atol_rtol_1e_3": 59,
+        "examples": [
+          {
+            "index": [
+              0,
+              1
+            ],
+            "actual": 2147483647,
+            "expected": -2
+          },
+          {
+            "index": [
+              0,
+              2
+            ],
+            "actual": -2,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              3
+            ],
+            "actual": -10,
+            "expected": -2
+          },
+          {
+            "index": [
+              0,
+              4
+            ],
+            "actual": 2147483647,
+            "expected": -1
+          },
+          {
+            "index": [
+              0,
+              5
+            ],
+            "actual": -2,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              7
+            ],
+            "actual": -2,
+            "expected": -1
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      }
+    },
+    "int32_add_high_words_broadcast": {
+      "against_vendor": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": false,
+        "different_values": 72,
+        "max_abs_error": 4294967295.0,
+        "violations_atol_rtol_1e_3": 64,
+        "examples": [
+          {
+            "index": [
+              0,
+              1
+            ],
+            "actual": 2147483646,
+            "expected": 2147483638
+          },
+          {
+            "index": [
+              0,
+              2
+            ],
+            "actual": 2147483638,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              3
+            ],
+            "actual": -1,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              4
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              5
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              6
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": false,
+        "different_values": 72,
+        "max_abs_error": 4294967295.0,
+        "violations_atol_rtol_1e_3": 64,
+        "examples": [
+          {
+            "index": [
+              0,
+              1
+            ],
+            "actual": 2147483646,
+            "expected": 2147483638
+          },
+          {
+            "index": [
+              0,
+              2
+            ],
+            "actual": 2147483638,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              3
+            ],
+            "actual": -1,
+            "expected": 2147483646
+          },
+          {
+            "index": [
+              0,
+              4
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              5
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          },
+          {
+            "index": [
+              0,
+              6
+            ],
+            "actual": 2147483646,
+            "expected": 2147483647
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          9,
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      }
+    },
+    "int32_add_low_words_scalar": {
+      "against_vendor": {
+        "shape": [
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          9
+        ],
+        "dtype": "torch.int32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      }
+    },
+    "float32_pow_square": {
+      "against_vendor": {
+        "shape": [
+          1,
+          23,
+          1024
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 12589,
+        "max_abs_error": 1.9073486328125e-06,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              0,
+              0
+            ],
+            "actual": 0.8803293704986572,
+            "expected": 0.880329430103302
+          },
+          {
+            "index": [
+              0,
+              0,
+              1
+            ],
+            "actual": 0.0005579390563070774,
+            "expected": 0.0005579389980994165
+          },
+          {
+            "index": [
+              0,
+              0,
+              2
+            ],
+            "actual": 0.00568402698263526,
+            "expected": 0.005684026516973972
+          },
+          {
+            "index": [
+              0,
+              0,
+              3
+            ],
+            "actual": 3.006107807159424,
+            "expected": 3.0061075687408447
+          },
+          {
+            "index": [
+              0,
+              0,
+              6
+            ],
+            "actual": 0.20596177875995636,
+            "expected": 0.20596174895763397
+          },
+          {
+            "index": [
+              0,
+              0,
+              7
+            ],
+            "actual": 3.019374370574951,
+            "expected": 3.019374132156372
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1024
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 12589,
+        "max_abs_error": 1.9073486328125e-06,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              0,
+              0
+            ],
+            "actual": 0.8803293704986572,
+            "expected": 0.880329430103302
+          },
+          {
+            "index": [
+              0,
+              0,
+              1
+            ],
+            "actual": 0.0005579390563070774,
+            "expected": 0.0005579389980994165
+          },
+          {
+            "index": [
+              0,
+              0,
+              2
+            ],
+            "actual": 0.00568402698263526,
+            "expected": 0.005684026516973972
+          },
+          {
+            "index": [
+              0,
+              0,
+              3
+            ],
+            "actual": 3.006107807159424,
+            "expected": 3.0061075687408447
+          },
+          {
+            "index": [
+              0,
+              0,
+              6
+            ],
+            "actual": 0.20596177875995636,
+            "expected": 0.20596174895763397
+          },
+          {
+            "index": [
+              0,
+              0,
+              7
+            ],
+            "actual": 3.019374370574951,
+            "expected": 3.019374132156372
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1024
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      }
+    },
+    "float32_mean_dim": {
+      "against_vendor": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 8,
+        "max_abs_error": 1.1920928955078125e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              4,
+              0
+            ],
+            "actual": 0.9496530294418335,
+            "expected": 0.9496529698371887
+          },
+          {
+            "index": [
+              0,
+              8,
+              0
+            ],
+            "actual": 1.0256149768829346,
+            "expected": 1.0256150960922241
+          },
+          {
+            "index": [
+              0,
+              9,
+              0
+            ],
+            "actual": 0.9906377196311951,
+            "expected": 0.9906376600265503
+          },
+          {
+            "index": [
+              0,
+              12,
+              0
+            ],
+            "actual": 0.9421882629394531,
+            "expected": 0.9421882033348083
+          },
+          {
+            "index": [
+              0,
+              17,
+              0
+            ],
+            "actual": 1.022940754890442,
+            "expected": 1.0229406356811523
+          },
+          {
+            "index": [
+              0,
+              18,
+              0
+            ],
+            "actual": 0.9725622534751892,
+            "expected": 0.9725621938705444
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 8,
+        "max_abs_error": 1.1920928955078125e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              4,
+              0
+            ],
+            "actual": 0.9496530294418335,
+            "expected": 0.9496529698371887
+          },
+          {
+            "index": [
+              0,
+              5,
+              0
+            ],
+            "actual": 0.9574889540672302,
+            "expected": 0.957489013671875
+          },
+          {
+            "index": [
+              0,
+              8,
+              0
+            ],
+            "actual": 1.0256149768829346,
+            "expected": 1.0256150960922241
+          },
+          {
+            "index": [
+              0,
+              12,
+              0
+            ],
+            "actual": 0.9421882629394531,
+            "expected": 0.9421882033348083
+          },
+          {
+            "index": [
+              0,
+              15,
+              0
+            ],
+            "actual": 0.9459606409072876,
+            "expected": 0.9459607005119324
+          },
+          {
+            "index": [
+              0,
+              18,
+              0
+            ],
+            "actual": 0.9725622534751892,
+            "expected": 0.9725621938705444
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 4,
+        "max_abs_error": 1.1920928955078125e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              5,
+              0
+            ],
+            "actual": 0.9574889540672302,
+            "expected": 0.957489013671875
+          },
+          {
+            "index": [
+              0,
+              9,
+              0
+            ],
+            "actual": 0.9906376600265503,
+            "expected": 0.9906377196311951
+          },
+          {
+            "index": [
+              0,
+              15,
+              0
+            ],
+            "actual": 0.9459606409072876,
+            "expected": 0.9459607005119324
+          },
+          {
+            "index": [
+              0,
+              17,
+              0
+            ],
+            "actual": 1.0229406356811523,
+            "expected": 1.022940754890442
+          }
+        ]
+      }
+    },
+    "float32_rsqrt": {
+      "against_vendor": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 10,
+        "max_abs_error": 1.1920928955078125e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              1,
+              0
+            ],
+            "actual": 0.9872346520423889,
+            "expected": 0.9872347712516785
+          },
+          {
+            "index": [
+              0,
+              2,
+              0
+            ],
+            "actual": 1.012212872505188,
+            "expected": 1.0122127532958984
+          },
+          {
+            "index": [
+              0,
+              6,
+              0
+            ],
+            "actual": 0.9939870834350586,
+            "expected": 0.9939871430397034
+          },
+          {
+            "index": [
+              0,
+              8,
+              0
+            ],
+            "actual": 0.9874327778816223,
+            "expected": 0.9874328970909119
+          },
+          {
+            "index": [
+              0,
+              10,
+              0
+            ],
+            "actual": 0.9720257520675659,
+            "expected": 0.9720256924629211
+          },
+          {
+            "index": [
+              0,
+              15,
+              0
+            ],
+            "actual": 1.0281658172607422,
+            "expected": 1.0281659364700317
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 16,
+        "max_abs_error": 2.384185791015625e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              1,
+              0
+            ],
+            "actual": 0.9872346520423889,
+            "expected": 0.9872348308563232
+          },
+          {
+            "index": [
+              0,
+              2,
+              0
+            ],
+            "actual": 1.012212872505188,
+            "expected": 1.0122127532958984
+          },
+          {
+            "index": [
+              0,
+              3,
+              0
+            ],
+            "actual": 1.0243703126907349,
+            "expected": 1.0243701934814453
+          },
+          {
+            "index": [
+              0,
+              4,
+              0
+            ],
+            "actual": 1.0261651277542114,
+            "expected": 1.026165246963501
+          },
+          {
+            "index": [
+              0,
+              5,
+              0
+            ],
+            "actual": 1.021957516670227,
+            "expected": 1.0219576358795166
+          },
+          {
+            "index": [
+              0,
+              6,
+              0
+            ],
+            "actual": 0.9939870834350586,
+            "expected": 0.9939871430397034
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          23,
+          1
+        ],
+        "dtype": "torch.float32",
+        "bitwise_equal": false,
+        "different_values": 8,
+        "max_abs_error": 1.1920928955078125e-07,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              1,
+              0
+            ],
+            "actual": 0.9872347712516785,
+            "expected": 0.9872348308563232
+          },
+          {
+            "index": [
+              0,
+              3,
+              0
+            ],
+            "actual": 1.0243703126907349,
+            "expected": 1.0243701934814453
+          },
+          {
+            "index": [
+              0,
+              4,
+              0
+            ],
+            "actual": 1.0261651277542114,
+            "expected": 1.026165246963501
+          },
+          {
+            "index": [
+              0,
+              5,
+              0
+            ],
+            "actual": 1.021957516670227,
+            "expected": 1.0219576358795166
+          },
+          {
+            "index": [
+              0,
+              9,
+              0
+            ],
+            "actual": 1.0047136545181274,
+            "expected": 1.004713773727417
+          },
+          {
+            "index": [
+              0,
+              11,
+              0
+            ],
+            "actual": 0.975843608379364,
+            "expected": 0.9758436679840088
+          }
+        ]
+      }
+    },
+    "bfloat16_mm_prefill": {
+      "against_vendor": {
+        "shape": [
+          23,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": false,
+        "different_values": 7,
+        "max_abs_error": 0.0009765625,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              442
+            ],
+            "actual": 0.11474609375,
+            "expected": 0.1142578125
+          },
+          {
+            "index": [
+              3,
+              1293
+            ],
+            "actual": 0.0007476806640625,
+            "expected": 0.000751495361328125
+          },
+          {
+            "index": [
+              10,
+              468
+            ],
+            "actual": -1.0058283805847168e-06,
+            "expected": -9.834766387939453e-07
+          },
+          {
+            "index": [
+              12,
+              136
+            ],
+            "actual": -0.140625,
+            "expected": -0.1416015625
+          },
+          {
+            "index": [
+              15,
+              293
+            ],
+            "actual": 0.00189208984375,
+            "expected": 0.00188446044921875
+          },
+          {
+            "index": [
+              17,
+              1271
+            ],
+            "actual": -4.887580871582031e-05,
+            "expected": -4.9114227294921875e-05
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          23,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": false,
+        "different_values": 4,
+        "max_abs_error": 1.52587890625e-05,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              3,
+              1293
+            ],
+            "actual": 0.0007476806640625,
+            "expected": 0.000751495361328125
+          },
+          {
+            "index": [
+              10,
+              468
+            ],
+            "actual": -1.0058283805847168e-06,
+            "expected": -9.909272193908691e-07
+          },
+          {
+            "index": [
+              18,
+              121
+            ],
+            "actual": -0.002716064453125,
+            "expected": -0.0027008056640625
+          },
+          {
+            "index": [
+              21,
+              753
+            ],
+            "actual": 4.291534423828125e-06,
+            "expected": 4.26173210144043e-06
+          }
+        ]
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          23,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": false,
+        "different_values": 6,
+        "max_abs_error": 0.0009765625,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              442
+            ],
+            "actual": 0.1142578125,
+            "expected": 0.11474609375
+          },
+          {
+            "index": [
+              10,
+              468
+            ],
+            "actual": -9.834766387939453e-07,
+            "expected": -9.909272193908691e-07
+          },
+          {
+            "index": [
+              12,
+              136
+            ],
+            "actual": -0.1416015625,
+            "expected": -0.140625
+          },
+          {
+            "index": [
+              15,
+              293
+            ],
+            "actual": 0.00188446044921875,
+            "expected": 0.00189208984375
+          },
+          {
+            "index": [
+              17,
+              1271
+            ],
+            "actual": -4.9114227294921875e-05,
+            "expected": -4.887580871582031e-05
+          },
+          {
+            "index": [
+              18,
+              121
+            ],
+            "actual": -0.002716064453125,
+            "expected": -0.0027008056640625
+          }
+        ]
+      }
+    },
+    "bfloat16_mm_decode": {
+      "against_vendor": {
+        "shape": [
+          1,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": false,
+        "different_values": 1,
+        "max_abs_error": 0.00048828125,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              442
+            ],
+            "actual": 0.11474609375,
+            "expected": 0.1142578125
+          }
+        ]
+      },
+      "flag_gems_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": true,
+        "different_values": 0,
+        "max_abs_error": 0.0,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": []
+      },
+      "vendor_against_cpu_double_rounded": {
+        "shape": [
+          1,
+          2048
+        ],
+        "dtype": "torch.bfloat16",
+        "bitwise_equal": false,
+        "different_values": 1,
+        "max_abs_error": 0.00048828125,
+        "violations_atol_rtol_1e_3": 0,
+        "examples": [
+          {
+            "index": [
+              0,
+              442
+            ],
+            "actual": 0.1142578125,
+            "expected": 0.11474609375
+          }
+        ]
+      }
+    },
+    "bfloat16_cat_kv_23_plus_1": {
+      "error": "Traceback (most recent call last):\n  File \"/public-flash/lvyufeng/codex-enflame-native-20261117/pr-20261119/enflame_published_gems_probe.py\", line 76, in run\n    actual = function(*inputs, **kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/cat.py\", line 453, in cat\n    _cat_run_kernel(A, dim, out_shape, out)\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/cat.py\", line 291, in _cat_run_kernel\n    cat_copy_row_kernel_4[grid](\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py\", line 400, in <lambda>\n    return lambda *args, **kwargs: self.run(grid=grid, warmup=False, *args, **kwargs)\n                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py\", line 766, in run\n    kernel = self._do_compile(key, signature, device, constexprs, options, attrs, warmup)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py\", line 910, in _do_compile\n    kernel = self.compile(src, target=target, options=options.__dict__)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py\", line 337, in compile\n    module = backend.make_ir(src, options, codegen_fns, module_map, context)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/backends/compiler.py\", line 90, in make_ir\n    return src.make_ir(self.target, options, codegen_fns, module_map, context)\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py\", line 103, in make_ir\n    return ast_to_ttir(self.fn, self, context=context, options=options, codegen_fns=codegen_fns,\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\ntriton.compiler.errors.CompilationError: at 34:4:\n    # [pre, dim_size_out*dim_prod_post]. Grid: (blocks_per_row, num_tensors,\n    # grid_z). pid_col/pid_row0/pid_t map directly onto the axes -> NO division\n    # at all; each program loops over the rows assigned to its z-slot.\n    pid_col = tl.program_id(0)\n    pid_t = tl.program_id(1)\n    pid_row0 = tl.program_id(2)\n\n    if pid_t == 0:\n        in_ptr = in_ptr_a\n        dim_size_in = dim_size_in_a\n        dim_offset = dim_offset_a\n    elif pid_t == 1:\n    ^\nAssertionError('Mismatched type for dim_size_in between then block (int32) and else block (int64)')\n"
+    }
+  }
+}

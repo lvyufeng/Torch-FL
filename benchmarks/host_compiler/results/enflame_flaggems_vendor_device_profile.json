@@ -1,0 +1,235 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "timing_note": "Profiler and API observer overhead are included; use separate unprofiled runs for the 80% gate. Device idle time includes host submission gaps, waits and instrumentation.",
+  "device_profile": {
+    "artifact": {
+      "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/vendor-device.trace.json",
+      "sha256": "b0a553cf687dc9e74d7e76d744553d4565355ecfe5f1382e31e7e1c03de64a07"
+    },
+    "scopes": {
+      "prefill": {
+        "profiled_wall_ms": 85.538151,
+        "kernel_count": 2188,
+        "kernel_sum_ms": 35.305801,
+        "copy_count": 1,
+        "copy_sum_ms": 0.054060000000000004,
+        "device_busy_union_ms": 35.359853515625,
+        "host_or_device_idle_ms": 50.178297484375,
+        "top_kernels": [
+          {
+            "name": "void matmul_kernel_lhs_all_in_l1_split_n<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+            "calls": 197,
+            "duration_ms": 6.479775000000002
+          },
+          {
+            "name": "void transpose<3, 2, (TransposePattern)3>(void*, void*, void*, TransposeParams)",
+            "calls": 308,
+            "duration_ms": 3.593792000000002
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::ADD, unsigned char, false, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 228,
+            "duration_ms": 3.0209170000000016
+          },
+          {
+            "name": "void to_kernel<tops::__ef_bfloat16, float>(tops::__ef_bfloat16*, float*, TO_OP_PARAS)",
+            "calls": 143,
+            "duration_ms": 2.0833630000000003
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, true>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.9731289999999997
+          },
+          {
+            "name": "void to_kernel<float, tops::__ef_bfloat16>(float*, tops::__ef_bfloat16*, TO_OP_PARAS)",
+            "calls": 141,
+            "duration_ms": 1.9664500000000003
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.8794590000000007
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::POW, unsigned char, false, false, false, false>(cc_kernel::POW, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.766909
+          },
+          {
+            "name": "void mean_kernel<float>(float*, float*, MEAN_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.695339999999999
+          },
+          {
+            "name": "void slice_and_transpose<3, 2>(void*, void*, SliceAndTransposeParams)",
+            "calls": 112,
+            "duration_ms": 1.5989849999999994
+          },
+          {
+            "name": "void unary_kernel<float, float, cc_kernel::RSQRT>(float*, float*, UNARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.537706999999999
+          },
+          {
+            "name": "void binary_b_dte_A_1_A_B_kernel<cc_kernel::MUL, unsigned char, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, unsigned long, BINARY_OP_PARAS)",
+            "calls": 56,
+            "duration_ms": 1.044287
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, true, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 57,
+            "duration_ms": 0.9681689999999998
+          },
+          {
+            "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::NEG>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+            "calls": 56,
+            "duration_ms": 0.7729730000000001
+          },
+          {
+            "name": "void concatenate_kernel<2, (ConcatenatePattern)0, 2ul, void*, void*>(void*, ConcatenateParams<2ul>, void*, void*)",
+            "calls": 56,
+            "duration_ms": 0.7168659999999999
+          },
+          {
+            "name": "void broadcast_single_thread_kernel<3, 2>(void*, void*, BroadcastParams)",
+            "calls": 56,
+            "duration_ms": 0.6803709999999998
+          },
+          {
+            "name": "void softmax_fwd_dim0_batch32_seq128_kernel<float, float, cc_kernel::SOFTMAX, 32>(float*, float*, int, int, int, int, unsigned int, unsigned int, SOFTMAX_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.563389
+          },
+          {
+            "name": "void matmul_kernel_all_in_l1_large_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, true, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.48677999999999993
+          },
+          {
+            "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::SILU>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.484414
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::ADD, unsigned char, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.46018500000000007
+          }
+        ]
+      },
+      "decode": {
+        "profiled_wall_ms": 76.84216,
+        "kernel_count": 1936,
+        "kernel_sum_ms": 30.091457,
+        "copy_count": 1,
+        "copy_sum_ms": 0.098744,
+        "device_busy_union_ms": 30.1901962890625,
+        "host_or_device_idle_ms": 46.6519637109375,
+        "top_kernels": [
+          {
+            "name": "void matmul_kernel_lhs_all_in_l1_trans_split_n<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 1, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+            "calls": 197,
+            "duration_ms": 5.791888000000005
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::ADD, unsigned char, false, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 228,
+            "duration_ms": 2.999333999999999
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 168,
+            "duration_ms": 2.696049
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::MUL, unsigned char, false, false, true>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.8700240000000004
+          },
+          {
+            "name": "void to_kernel<tops::__ef_bfloat16, float>(tops::__ef_bfloat16*, float*, TO_OP_PARAS)",
+            "calls": 143,
+            "duration_ms": 1.8521100000000004
+          },
+          {
+            "name": "void to_kernel<float, tops::__ef_bfloat16>(float*, tops::__ef_bfloat16*, TO_OP_PARAS)",
+            "calls": 141,
+            "duration_ms": 1.8071500000000005
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::POW, unsigned char, false, false, false, false>(cc_kernel::POW, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.679072
+          },
+          {
+            "name": "void mean_kernel<float>(float*, float*, MEAN_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.4813760000000002
+          },
+          {
+            "name": "void concatenate_kernel<2, (ConcatenatePattern)0, 2ul, void*, void*>(void*, ConcatenateParams<2ul>, void*, void*)",
+            "calls": 112,
+            "duration_ms": 1.4751840000000007
+          },
+          {
+            "name": "void slice_kernel<2, 2, 4>(void*, void*, SliceParams)",
+            "calls": 112,
+            "duration_ms": 1.441986
+          },
+          {
+            "name": "void unary_kernel<float, float, cc_kernel::RSQRT>(float*, float*, UNARY_OP_PARAS)",
+            "calls": 113,
+            "duration_ms": 1.3583770000000002
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::MUL, unsigned char, false, false, false, false>(cc_kernel::MUL, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 87,
+            "duration_ms": 1.2594300000000003
+          },
+          {
+            "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::NEG>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+            "calls": 56,
+            "duration_ms": 0.7268100000000002
+          },
+          {
+            "name": "void broadcast_single_thread_kernel<3, 2>(void*, void*, BroadcastParams)",
+            "calls": 56,
+            "duration_ms": 0.6854230000000001
+          },
+          {
+            "name": "void softmax_fwd_dim0_batch32_seq128_kernel<float, float, cc_kernel::SOFTMAX, 32>(float*, float*, int, int, int, int, unsigned int, unsigned int, SOFTMAX_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.561547
+          },
+          {
+            "name": "void matmul_kernel_all_in_l1_large_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 32, false, false, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.46249999999999997
+          },
+          {
+            "name": "void unary_kernel<tops::__ef_bfloat16, tops::__ef_bfloat16, cc_kernel::SILU>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, UNARY_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.45579300000000006
+          },
+          {
+            "name": "void matmul_kernel_lhs_all_in_l1_trans_split_b<tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, tops::__ef_bfloat16, 1, false, true, false>(tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, tops::__ef_bfloat16*, PRELU_OP_PARAS, GEMM_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.4283590000000001
+          },
+          {
+            "name": "void binary_broadcast_kernel<cc_kernel::ADD, unsigned char, false, false, false>(cc_kernel::ADD, unsigned char*, unsigned char*, unsigned char*, BINARY_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.425296
+          },
+          {
+            "name": "void binary_tensor_kernel<cc_kernel::MUL, tops::__ef_bfloat16, false, false, true, false>(cc_kernel::MUL, unsigned char*, unsigned char*, tops::__ef_bfloat16*, BINARY_OP_PARAS)",
+            "calls": 28,
+            "duration_ms": 0.420223
+          }
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,357 @@
+{
+  "torch": "2.10.0+cpu",
+  "device": "flagos:0",
+  "mode": "plain",
+  "dtype": "bfloat16",
+  "execution": "eager",
+  "steps": 8,
+  "rounds": 0,
+  "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+  "transformers": "5.19.0",
+  "cpu_affinity": [
+    64,
+    65,
+    66,
+    67,
+    68,
+    69,
+    70,
+    71
+  ],
+  "torch_threads": 1,
+  "token_selection_device": "cpu",
+  "kernels": [
+    "flaggems",
+    "vendor"
+  ],
+  "config": "/public-flash/lvyufeng/codex-enflame-native-20261117/venv/lib/python3.12/site-packages/torch_fl/configs/backends_enflame.conf",
+  "torch_fl_import_ms": 9547.543266788125,
+  "math_settings": {
+    "float32_matmul_precision": "highest",
+    "allow_tf32": false,
+    "allow_bf16_reduced_precision_reduction": true,
+    "allow_fp16_reduced_precision_reduction": true,
+    "environment": {
+      "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+      "NVIDIA_TF32_OVERRIDE": null,
+      "CUBLAS_WORKSPACE_CONFIG": null
+    }
+  },
+  "layers": 28,
+  "parameters": 596049920,
+  "prompt_tokens": 23,
+  "contract": {
+    "version": 1,
+    "checkpoint_sha256": {
+      "model.safetensors": "f47f71177f32bcd101b7573ec9171e6a57f4f4d31148d38e382306f42996874b"
+    },
+    "config_sha256": "660db3b73d788119c04535e48cf9be5f55bc3100841a718637ae695b442f27dd",
+    "dtype": "bfloat16",
+    "attention": "eager",
+    "math_settings": {
+      "float32_matmul_precision": "highest",
+      "allow_tf32": false,
+      "allow_bf16_reduced_precision_reduction": true,
+      "allow_fp16_reduced_precision_reduction": true,
+      "environment": {
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "CUBLAS_WORKSPACE_CONFIG": null
+      }
+    }
+  },
+  "reference_sha256": "a9081558f91c0dd03145d44faadd7fa5fc1703e6bf2b14d978facab45768a1e0",
+  "cold_prefill_ms": 4954.650843515992,
+  "teacher_forced_predictions": [
+    785,
+    12884,
+    374,
+    6303,
+    1576,
+    315,
+    279,
+    1616
+  ],
+  "reference_comparison": [
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.999997079372406,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999964833259583,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.999993622303009,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999920129776001,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999940991401672,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999932050704956,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999886155128479,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999971389770508,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    },
+    {
+      "max_abs": 0.0,
+      "relative_l2": 0.0,
+      "cosine": 0.9999892711639404,
+      "top1_equal": true,
+      "bitwise_equal": true,
+      "allclose_rtol_003_atol_01": true
+    }
+  ],
+  "logits_scope": {
+    "prefill": "all_positions",
+    "decode": "every_requested_step"
+  },
+  "logits_comparison": [
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 3494528,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    },
+    {
+      "atol": 0.001,
+      "rtol": 0.001,
+      "passed": true,
+      "elements": 151936,
+      "violations": 0,
+      "nonfinite": 0,
+      "max_abs": 0.0,
+      "max_scaled_error": 0.0
+    }
+  ],
+  "logits_validation": {
+    "atol": 0.001,
+    "rtol": 0.001,
+    "comparisons": 9,
+    "passed_comparisons": 9,
+    "failed_steps": [],
+    "violations": 0,
+    "passed": true
+  },
+  "timings": {
+    "prefill_submit_ms": [],
+    "prefill_complete_ms": [],
+    "decode_submit_ms": [],
+    "decode_complete_ms": []
+  },
+  "medians": {},
+  "warm_python_calls": {
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mean.py:mean_dim": 226,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py:__getitem__": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py:<lambda>": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/libentry.py:run": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py:default": 904,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/libentry.py:key": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/libentry.py:_descriptor_cache_key": 1914,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/libentry.py:spec_arg": 1352,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/mean.py:<lambda>": 226,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/jit.py:__call__": 450,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/language/core.py:_unwrap_if_constexpr": 788,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/__init__.py:cdiv": 338,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:__getitem__": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:_init_handles": 564,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:runner": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/runtime/driver.py:active": 564,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:launch_metadata": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:__init__": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/compiler/compiler.py:run": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/backends/enflame/backend.py:__call__": 282,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/knobs.py:__call__": 564,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/ops/transpose.py:transpose": 674,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/ops/_unsafe_view.py:_unsafe_view": 618,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/ops/silu.py:silu": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:__call__": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:prepare_args": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:num_output_tensors": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/shape_utils.py:check_tensor_attributes": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:is_tensor": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:<genexpr>": 448,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/type_utils.py:type_promotion": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:use_fast_path": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/shape_utils.py:all_the_same_shape": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/shape_utils.py:<genexpr>": 168,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/shape_utils.py:all_c_contiguous": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:__init__": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:instantiate": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:numel": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:element_size": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:stride": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/shape_utils.py:heuristics_for_tile_size": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/triton/__init__.py:next_power_of_2": 112,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/shape_utils.py:heuristics_for_num_warps": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/codegen_config_utils.py:get_heuristics_for_num_warps": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/codegen_config_utils.py:enflame_heuristics_for_num_warps": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:data_ptr": 224,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/runtime/backend/_enflame/gcu300/utils/pointwise_dynamic.py:_unwrap": 56,
+    "/public-flash/lvyufeng/miniconda3/envs/torch-fl-hf-test/lib/python3.12/site-packages/flag_gems/utils/tensor_wrapper.py:unwrap": 56
+  },
+  "host_program_stats": [
+    0,
+    0,
+    0
+  ],
+  "math_settings_after": {
+    "float32_matmul_precision": "highest",
+    "allow_tf32": false,
+    "allow_bf16_reduced_precision_reduction": true,
+    "allow_fp16_reduced_precision_reduction": true,
+    "environment": {
+      "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+      "NVIDIA_TF32_OVERRIDE": null,
+      "CUBLAS_WORKSPACE_CONFIG": null
+    }
+  },
+  "producer": {
+    "backend": "torch_fl",
+    "torch": "2.10.0+cpu",
+    "math_settings_after": {
+      "float32_matmul_precision": "highest",
+      "allow_tf32": false,
+      "allow_bf16_reduced_precision_reduction": true,
+      "allow_fp16_reduced_precision_reduction": true,
+      "environment": {
+        "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE": null,
+        "NVIDIA_TF32_OVERRIDE": null,
+        "CUBLAS_WORKSPACE_CONFIG": null
+      }
+    }
+  },
+  "model_capture_audit": {
+    "blocked_entry_points": [
+      "torch.compile",
+      "torch._dynamo.optimize",
+      "torch._dynamo.export",
+      "torch._dynamo.optimize_assert",
+      "torch._dynamo.eval_frame.optimize",
+      "torch._dynamo.eval_frame._optimize",
+      "torch._dynamo.eval_frame.optimize_assert",
+      "torch.jit.script",
+      "torch.jit.trace",
+      "torch.jit.trace_module"
+    ],
+    "calls": 0
+  }
+}

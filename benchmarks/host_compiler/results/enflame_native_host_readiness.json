@@ -1,0 +1,531 @@
+{
+  "schema_version": 1,
+  "date": "2026-11-17",
+  "timezone": "Asia/Shanghai",
+  "source_revision": "eba6b82e95b4ae3cc7f1784c54fd8724596f3845",
+  "native_host_acceptance": {
+    "status": "blocked_before_native_host_build",
+    "admitted_backends": [
+      "nvidia"
+    ],
+    "enflame_error": "no validated native-host launch adapter for enflame",
+    "build_spellings_tested": [
+      "enflame",
+      "gcu"
+    ],
+    "native_host_hardware_cases_executed": 0,
+    "full_model_executed": false,
+    "performance_gate": "strict eager latency <= 1.25 times same-card vendor PyTorch, with matched workload and environment",
+    "performance_gate_result": "not_measured",
+    "additional_source_gaps": [
+      "native_source_host integration marker is gated to the NVIDIA runtime",
+      "qwen_eager.py accepts only cuda:0 and flagos:0; vendor GCU requires gcu:0 and torch.gcu synchronization"
+    ]
+  },
+  "hardware": {
+    "asset_label": "S60",
+    "reported_device_name": "ZIXIAOC200",
+    "physical_device": 0,
+    "driver_version": "1.10.6",
+    "memory_mib_before_each_smoke": {
+      "total": 42976,
+      "reserved": 1129.94921875,
+      "used": 0,
+      "free": 41846.05078125
+    },
+    "pmon_before_each_smoke": "no process running",
+    "memory_used_mib_after_both_smokes": 0,
+    "pmon_after_both_smokes": "no process running",
+    "visibility_environment": {
+      "TOPS_VISIBLE_DEVICES": "0"
+    },
+    "container_image": "registry-egc.enflame-tech.com/artifacts/torch_gcu:v2.10.0-TR3.7.107-ubuntu2204",
+    "container_image_id": "sha256:52aac4da7de1a60a28d856e9ff513a0c186777c4539ad063f8fb86e7ac42a066",
+    "os": "Ubuntu 22.04.5 LTS",
+    "container_package_versions": {
+      "topsruntime": "1.7.2.2402",
+      "topscc": "1.7.2.2402",
+      "topsaten": "3.6.20260403"
+    },
+    "tops_runtime_library": "/opt/tops/lib/libtopsrt.so.1.7",
+    "installed_torch_fl_sdk_manifest": null,
+    "installed_torch_fl_extension_sha256": "1a6582944288ce2da9b7bfbfede00a3526819769de579067e476cd3180441a70",
+    "provenance_limit": "Historical installed torch_fl artifact; not built from the source_revision in this validation. The container is not the pinned current CI image."
+  },
+  "smoke_method": {
+    "provider_processes": "sequential separate Python environments on physical device 0",
+    "operations": [
+      "add",
+      "mul",
+      "mm"
+    ],
+    "dtypes": [
+      "torch.float32",
+      "torch.bfloat16"
+    ],
+    "left_shape": [
+      17,
+      31
+    ],
+    "elementwise_right_shape": [
+      17,
+      31
+    ],
+    "mm_right_shape": [
+      31,
+      13
+    ],
+    "left_values": "(arange(17*31).reshape(17,31) % 13 - 6) / 8",
+    "right_values": "(arange(prod(right_shape)).reshape(right_shape) % 7 - 3) / 8",
+    "layouts": {
+      "dense": [
+        31,
+        1
+      ],
+      "transpose": [
+        1,
+        17
+      ]
+    },
+    "layout_method": "Transfer a contiguous transpose to device, then transpose on device; assert the resulting strides before each call.",
+    "reference": "CPU torch using the same source values and dtype; torch.testing.assert_close with its default dtype tolerances",
+    "measured_latency": false
+  },
+  "existing_flaggems_environment": {
+    "scope": "existing-environment device smoke; not current-head native-host validation",
+    "provider": "flaggems",
+    "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+    "versions": {
+      "torch": "2.10.0+cpu",
+      "torch-fl": "2.10.0+tops1.9.10",
+      "torch-gcu": null,
+      "flagtree": "0.7.0+enflame3.6",
+      "flag-gems": "5.4.0",
+      "Cython": null,
+      "transformers": "5.19.0"
+    },
+    "cases": [
+      {
+        "operator": "add",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      }
+    ],
+    "torch_cuda": null,
+    "build_config": {
+      "ACCELERATOR": "gcu",
+      "KERNELS": [
+        "flaggems",
+        "vendor"
+      ]
+    },
+    "native_hosts_enabled": false,
+    "triton": "3.6.0",
+    "device_count": 1,
+    "driver_sources": {
+      "triton/backends/enflame/backend.py": {
+        "sha256": "f3fb7ba077c9070598cc5da565741c7e8d6cac66f4ecac4f12f28fbdb93151b4",
+        "matches_installed_record": true
+      },
+      "triton/backends/enflame/driver.py": {
+        "sha256": "023f2668b139e0d4ed71855c6a69a9b2c520129f2c8a052cb92b8c0290b2fdb0",
+        "matches_installed_record": true
+      },
+      "triton/backends/enflame/utils/gcu.cpp": {
+        "sha256": "1449b98b34f2f0d40891bb69c33c9e956427664730dc9a9cf60aa3c07ab60e82",
+        "matches_installed_record": true
+      }
+    },
+    "device": "flagos:0",
+    "initialization_seconds": 17.774386506527662,
+    "status": "pass",
+    "elapsed_seconds": 26.142927745357156
+  },
+  "existing_vendor_environment": {
+    "scope": "existing-environment device smoke; not current-head native-host validation",
+    "provider": "vendor",
+    "python": "3.12.13 | packaged by conda-forge | (main, Mar  5 2026, 16:50:00) [GCC 14.3.0]",
+    "versions": {
+      "torch": "2.10.0+cpu",
+      "torch-fl": null,
+      "torch-gcu": "2.10.0+3.7.20260408",
+      "flagtree": null,
+      "flag-gems": null,
+      "Cython": null,
+      "transformers": "5.16.1"
+    },
+    "cases": [
+      {
+        "operator": "add",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.float32",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.float32",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "add",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mul",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.bfloat16",
+        "layout": "dense",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          31,
+          1
+        ]
+      },
+      {
+        "operator": "mm",
+        "dtype": "torch.bfloat16",
+        "layout": "transpose",
+        "shape": [
+          17,
+          31
+        ],
+        "status": "pass",
+        "max_abs": 0,
+        "stride": [
+          1,
+          17
+        ]
+      }
+    ],
+    "torch_cuda": null,
+    "device_count": 1,
+    "device": "gcu:0",
+    "initialization_seconds": 12.604931022971869,
+    "status": "pass",
+    "elapsed_seconds": 12.9205966219306
+  },
+  "local_verification": {
+    "command": "TORCH_DEVICE_BACKEND_AUTOLOAD=0 python -m pytest tests/unit/test_native_host_backend.py tests/unit/test_setup_build.py tests/unit/test_wheel_preflight.py tests/unit/test_ops_conftest_platform.py -q -rs --disable-warnings",
+    "output": "169 passed, 1 skipped, 49 warnings in 4.82s",
+    "skipped": "tests/unit/test_setup_build.py:517: metax setup.py builds its shim with GNU ld",
+    "warnings": "PytestUnknownMarkWarning from the platform-collection unit harness",
+    "ruff_check": "All checks passed!",
+    "ruff_format_check": "624 files already formatted"
+  },
+  "record_type": "historical_pre_adapter_readiness_snapshot",
+  "superseded_by": "enflame_native_host_validation.json"
+}

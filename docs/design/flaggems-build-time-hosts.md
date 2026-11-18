@@ -122,12 +122,20 @@ scratch arguments, tensor-map encoding and published FlagTree module loader.
 This adapter contains no numerical kernels. Other adapters must describe their
 own compiler metadata and loader instead of inheriting CUDA behavior.
 
-`backend.py` is the single admission registry. Only `nvidia` is admitted in this
-change. A native-host build or activation for another vendor fails explicitly;
+`backend.py` is the single admission registry. The admitted adapters are `nvidia`
+and experimental `metax`, `ascend` and `enflame`. A native-host build or activation
+for another vendor fails explicitly;
 it cannot select a CUDA adapter, boxing route or alternate host implementation.
-MetaX and Ascend admission requires separate validation under
+MetaX and Ascend validation is tracked separately under
 [issue #832](https://github.com/flagos-ai/Torch-FL/issues/832) and
 [issue #833](https://github.com/flagos-ai/Torch-FL/issues/833).
+
+[Enflame validation](../vendors/gcu/flaggems-native-host-validation.md) records its TOPS
+launch contract, published pointwise ABI, hardware conformance and full-model
+comparison. Its GCU300 pointwise adapter extends the shared C++ preparation and
+schedule for ordinary tensors, retaining compiled published object semantics
+for unsupported preparation. New ranks generate only the original device code;
+host control stays in the prebuilt runtime.
 
 The generated wheel manifest records the vendor, compiler backend and distribution
 version, capability and slot ABI, utility modules, published driver source hashes,
@@ -135,6 +143,11 @@ adapter hashes and native source hashes. The compiled launcher embeds the native
 source fingerprint and reports its contract. Loading compares all three sources
 of evidence before installing the driver adapter. Changes require rebuilding the
 wheel. These are generated artifact records, not checked-in measurement files.
+
+Runtime audits distinguish launcher construction (`launched_kernels`, retained
+for source provenance) from successful SDK submissions (`enqueued_kernels`).
+Only successful submissions establish that a model actually executed FlagGems
+device kernels; an ATen redispatch with zero submissions does not qualify.
 
 The standalone preflight reads the wheel without importing `torch_fl`, Torch or
 the compiler. It checks packaged sources and utility extensions against the
@@ -186,19 +199,24 @@ and common launcher under `torch_fl.native_host._generated`.
 
 Initialization installs the prebuilt launcher before importing FlagGems, then
 binds the generated host functions after the normal backend setup. The build
-requires a working NVIDIA CPU-Torch environment, the pinned published dependency
-wheels, Cython 3.2.4, and the CUDA toolkit. Cython is an optional build requirement
+requires CPU Torch, the selected adapter's pinned published dependency wheels,
+Cython 3.2.4 and its vendor toolkit (CUDA for NVIDIA, TOPS for Enflame).
+Cython is an optional build requirement
 selected by `FLAGOS_BUILD_NATIVE_HOST`, not a dependency of ordinary platform
 builds. Install it explicitly when building without isolation. No FlagGems or
 FlagTree Git checkout is used. The manifest binds the hosts to their
 source/dependency cohort; changed
 source or an incompatible driver ABI requires rebuilding the wheel.
 
-The feature is currently validated for inference on H100 with Torch 2.10.0+cpu,
-FlagGems 5.4.0 and FlagTree 0.7.0. Boxing, the upstream C++ wrapper slot and
-TileOPs are disabled for this build. A missing numerical route is an error.
-This work does not add new vendor-native fallback operators or claim coverage
-for other accelerator backends.
+The H100 inference cohort uses Torch 2.10.0+cpu, FlagGems 5.4.0 and FlagTree
+0.7.0. The experimental Enflame cohort and its optimized full-model gates are
+recorded in the
+[Enflame validation](../vendors/gcu/flaggems-native-host-validation.md).
+Boxing, the upstream C++ wrapper slot and TileOPs are disabled for these builds.
+Missing workload routes must be resolved through a qualified FlagGems path or
+the platform's generator. Enflame's measured precision/compiler gaps use its
+generated vendor operators. This does not claim coverage for other accelerator
+backends.
 
 ## Registry coverage and generalization
 

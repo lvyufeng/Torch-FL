@@ -1,0 +1,931 @@
+{
+  "schema_version": 1,
+  "diagnostic_only": true,
+  "scope": "One warmed full prefill and all eight cached decode steps, forward indices 9..17; hooks exclude benchmark logit reads and checkpoint loading. No diagnostic TorchDispatchMode is active.",
+  "guard": {
+    "schema_version": 1,
+    "diagnostic_only": true,
+    "completed_forwards": 29,
+    "recorded_forward_limit": 0,
+    "python_model_readbacks": [],
+    "forward_api_files": [
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-009.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-010.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-011.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-012.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-013.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-014.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-015.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-016.json",
+      "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-017.json"
+    ],
+    "records": []
+  },
+  "forward_profiles": [
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-009.json",
+        "sha256": "4047d403e15aaf836aa3bed1ca15dd09ea42f352f768dd361a52662cf527af3a"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 25628,
+          "cpu_ms": 1.4700530000001006
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1228,
+          "cpu_ms": 4.599233
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 17.64081500000002
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.9385070000000026
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.9222110000000043
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 210,
+          "cpu_ms": 0.05650499999999998
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 7,
+          "cpu_ms": 0.19658499999999998
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 7,
+          "cpu_ms": 0.43799
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-010.json",
+        "sha256": "8a65750a25bc5a66a7c7bc5d07707c86cdc6f9e2ee9045a72a01dde0777c3296"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2843109999999904
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.874082000000001
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 16.074138999999988
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.882577000000004
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.9620200000000043
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.04462000000000001
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.388911
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.8100879999999999
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-011.json",
+        "sha256": "9ecc40c41b4011f2eed3b68a2bc7d74ac00f4ae740a95d4999f5c1d8a994069b"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2802359999999877
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.914351000000001
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 16.04554800000001
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.8985700000000008
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.9873809999999983
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.044569
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.38837399999999994
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.8101320000000001
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-012.json",
+        "sha256": "a8e328b693361d915799aede6aa194301f0d49f2ddfeffe9d96df515b1b40695"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2773219999999779
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.983370000000001
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 16.00102699999998
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.8669750000000016
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.883689000000003
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.044822000000000015
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.391748
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.8308479999999999
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-013.json",
+        "sha256": "09dec0f6d5f38869aedb11f919adf42ea30450473ba35cb94006f1e69557617e"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2831539999999995
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.893046000000002
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 16.24117599999999
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.9119479999999969
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.9212469999999993
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.043629999999999995
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.38332000000000005
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.815725
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-014.json",
+        "sha256": "674fecd20a755085c590e35e400b245c2231c396babf8fa5e2db297d85ee145a"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2618699999999754
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.959169999999996
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 16.099694
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.9556420000000005
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.922414000000004
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.043344
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.38231200000000004
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.790271
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-015.json",
+        "sha256": "9dee49cd4478e5fa9b8e4f654eee1365e76f0727d90c7749fb8b516be3a4a84b"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.3233040000000027
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.8884129999999986
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 15.989982999999977
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.9240560000000009
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.8924009999999996
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.06090299999999997
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.38380200000000003
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.798641
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-016.json",
+        "sha256": "58c2e07253195066eae94dfa678758fa346eeec1c88321f4735a9a765961e62c"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.262176999999985
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.892636999999996
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 15.659347000000011
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.8839720000000013
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.870938000000001
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.043625999999999984
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.377479
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.800033
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    },
+    {
+      "artifact": {
+        "path": "/public-flash/lvyufeng/codex-enflame-native-20261117/gems-20261118/results/forward-api/forward-017.json",
+        "sha256": "71561da25179fff8533cd6da378595f53cfbc697f813164d586ac512adb1c156"
+      },
+      "api_cpu_times": [
+        {
+          "api": "topsGetDevice",
+          "calls": 22086,
+          "cpu_ms": 1.2669579999999927
+        },
+        {
+          "api": "topsLaunchKernel",
+          "calls": 1070,
+          "cpu_ms": 3.8726370000000006
+        },
+        {
+          "api": "topsEventRecord",
+          "calls": 1494,
+          "cpu_ms": 15.774991999999992
+        },
+        {
+          "api": "topsStreamWaitEvent",
+          "calls": 1494,
+          "cpu_ms": 1.898387999999999
+        },
+        {
+          "api": "topsModuleLaunchKernel",
+          "calls": 946,
+          "cpu_ms": 2.8877470000000023
+        },
+        {
+          "api": "topsSetDevice",
+          "calls": 181,
+          "cpu_ms": 0.043695999999999964
+        },
+        {
+          "api": "topsStreamSynchronize",
+          "calls": 15,
+          "cpu_ms": 0.388542
+        },
+        {
+          "api": "topsMemcpy",
+          "calls": 15,
+          "cpu_ms": 0.803671
+        }
+      ],
+      "transfers": [
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::EmbeddingKernelGcu"
+          ],
+          "calls": 1
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast",
+            "at::native::flagos::ArangeKernelGcu"
+          ],
+          "calls": 8
+        },
+        {
+          "kind": 3,
+          "bytes": 4,
+          "roots": [
+            "at::native::flagos::AddTensorKernelGcu"
+          ],
+          "calls": 4
+        },
+        {
+          "kind": 1,
+          "bytes": 2,
+          "roots": [],
+          "calls": 1
+        },
+        {
+          "kind": 2,
+          "bytes": 1,
+          "roots": [
+            "at::native::flagos::gcu::DtypeCast"
+          ],
+          "calls": 1
+        }
+      ],
+      "tensor_readbacks": [],
+      "only_scalar_bool_readbacks": true
+    }
+  ],
+  "api_cpu_times": [
+    {
+      "api": "topsGetDevice",
+      "calls": 202316,
+      "cpu_ms": 11.709385000000012
+    },
+    {
+      "api": "topsLaunchKernel",
+      "calls": 9788,
+      "cpu_ms": 35.87693899999999
+    },
+    {
+      "api": "topsEventRecord",
+      "calls": 13446,
+      "cpu_ms": 145.52672099999998
+    },
+    {
+      "api": "topsStreamWaitEvent",
+      "calls": 13446,
+      "cpu_ms": 17.16063500000001
+    },
+    {
+      "api": "topsModuleLaunchKernel",
+      "calls": 8514,
+      "cpu_ms": 26.250048000000017
+    },
+    {
+      "api": "topsSetDevice",
+      "calls": 1658,
+      "cpu_ms": 0.42571499999999995
+    },
+    {
+      "api": "topsStreamSynchronize",
+      "calls": 127,
+      "cpu_ms": 3.2810730000000006
+    },
+    {
+      "api": "topsMemcpy",
+      "calls": 127,
+      "cpu_ms": 6.897399
+    }
+  ],
+  "transfers": [
+    {
+      "kind": 2,
+      "bytes": 1,
+      "roots": [
+        "at::native::flagos::EmbeddingKernelGcu"
+      ],
+      "calls": 9
+    },
+    {
+      "kind": 3,
+      "bytes": 4,
+      "roots": [
+        "at::native::flagos::gcu::DtypeCast",
+        "at::native::flagos::ArangeKernelGcu"
+      ],
+      "calls": 68
+    },
+    {
+      "kind": 1,
+      "bytes": 2,
+      "roots": [],
+      "calls": 9
+    },
+    {
+      "kind": 2,
+      "bytes": 1,
+      "roots": [
+        "at::native::flagos::gcu::DtypeCast"
+      ],
+      "calls": 9
+    },
+    {
+      "kind": 3,
+      "bytes": 4,
+      "roots": [
+        "at::native::flagos::AddTensorKernelGcu"
+      ],
+      "calls": 32
+    }
+  ],
+  "tensor_readbacks": [],
+  "only_scalar_bool_readbacks": true,
+  "logits_validation": {
+    "atol": 0.001,
+    "rtol": 0.001,
+    "comparisons": 9,
+    "passed_comparisons": 9,
+    "failed_steps": [],
+    "violations": 0,
+    "passed": true
+  }
+}
